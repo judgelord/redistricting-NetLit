@@ -1,0 +1,668 @@
+---
+title: "NetLit  Vignette"
+subtitle: "Redistricting Literature"
+author:
+output:
+    # pdf_document:
+    #   toc: true
+    #   keep_tex: true
+    html_document:
+      highlight: zenburn
+      toc: true
+      toc_float: true
+      code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE}
+
+library(here)
+library(tidyverse)
+library(visNetwork)
+library(igraph)
+library(googlesheets4)
+library(fontawesome)
+
+# update data from google sheet if token if  present
+
+source(here::here("code", "update.R"))
+
+
+
+#TODO Devin will rename package "NetLit" 
+# The R package files are currently in NetLit/Netlit on dropbox
+#devtools::install_github("judgelord/literature")
+library(literature)
+
+knitr::opts_chunk$set(echo = TRUE, 
+                      cache = FALSE, 
+                      fig.width=8.5, 
+                      split = T,
+                      fig.align = 'center', 
+                      fig.path='../figs/',
+                      fig.retina = 4,
+                      warning=FALSE, 
+                      message=FALSE)
+
+
+# Table formatting
+library(kableExtra)
+kablebox <- . %>% 
+  slice_head(n = 100) %>%
+  knitr::kable() %>% 
+  kable_styling() %>% 
+  scroll_box(height = "400px")
+```
+
+
+# Data
+
+```{r data}
+# load data
+dag <- read_csv(here("Data",  "dag.csv")) %>% filter(cite_weight > 0)
+
+node_attributes <- read_csv(here("data", "node_attributes.csv"))
+```
+
+
+
+```{r visnetwork}
+
+# all edges
+edges <- lit$edgelist %>% 
+  mutate(
+    detail = paste(edge, mechanism, cites, sep = "<br>") %>% str_remove_all("NA"),
+    type = edge,
+    title = paste0("<p>", detail, "</p>"),
+    #label = type,
+    color = ifelse(str_detect(type, "^increase"), "#81a275", "#617d9f"),
+    color = ifelse(str_detect(type, "^decrease"), "#b14552", color),
+    value = cite_weight) %>%
+  distinct()
+
+core <- edges %>% filter(core, !is.na(cites))
+
+cited <- edges %>% filter(cite_weight>0)
+
+
+
+# node attributes
+nodes <- lit$nodelist %>% mutate(label = node, 
+                                 id = node,
+                                 # scale nodes by degree
+                                 icon.size = degree + 40,
+                                 title = paste0("<p>", type, ": ", label,"</p>") %>% str_remove("NA:"),
+                                 # levels in case we want Hierarchical Layout
+                                 level = ifelse(type == "goal", 1:2, 3:4),
+                                 # FontAwesome.com shapes for fun
+                                 shape = "icon",
+                                 icon.color = case_when(node %in% c(cited$to, cited$from) ~ "black",
+                                                        !node %in% c(cited$to, cited$from) ~ "grey"),
+                                 icon.code = case_when(type == "condition" ~ "f205", # chess board
+                                                       type == "goal" ~ "f24e", # scale  "f05b", # crosshairs
+                                                       type == "policy" ~ "f0e3", # gavel
+                                                       type == "value" ~ "f004", # "f4be", # hand with heart
+                                                       type == "effect" ~ "f080", # "f681", # data 
+                                                       type == "metric" ~ "f1de",# "f548", # ruler 
+                                                       TRUE ~ "f0c8"), #square
+                                 icon.face =  "'FontAwesome'",
+                                 icon.weight = "bold")
+
+# OLD CODE - REPLACE 
+
+# define function to plot
+dag_plot <- function(dag){
+node <- c(dag$from,
+           dag$to)
+
+nodes <- tibble(id = node %>% str_remove(".* - "),
+                type = node %>% str_remove(" - .*")) %>% 
+  filter(!is.na(id)) %>%
+  distinct() %>%
+    # removed nodes with multiple types
+  add_count(id) %>% 
+  filter(n == 1)
+
+edges <- dag %>% transmute(
+  from = from %>% str_remove(".* - "),
+  to = to %>% str_remove(".* - "),
+  detail = paste(edge, mechanism, cites, sep = "<br>") %>% str_remove_all("NA"), 
+  type = edge
+) %>% 
+  filter(!is.na(from),!is.na(to)) %>% 
+  distinct()
+
+
+
+# calculate betweeness in order to scale nodes
+graph <- igraph::graph.data.frame(edges, directed = T)
+degree_value <- degree(graph, mode = "in")
+nodes$icon.size <- degree_value[match(nodes$id, names(degree_value))] + 40
+
+# add attributes
+nodes <- nodes %>% mutate(label = id, 
+                          title = paste0("<p>", type, ": ", label,"</p>"),
+                          # levels in case we want Hierarchical Layout
+                          level = ifelse(type == "goal", 1:2, 3:4),
+                          # FontAwesome.com shapes for fun
+                          shape = "icon",
+                            icon.color = case_when(type =="goal" ~ "black",
+                                                   type !="goal" ~ "black"),
+                            icon.code = case_when(type == "condition" ~ "f205", # chess board
+                                                  type == "goal" ~ "f24e", # scale  "f05b", # crosshairs
+                                                  type == "policy" ~ "f0e3", # gavel
+                                                  type == "value" ~ "f004", # "f4be", # hand with heart
+                                                  type == "effect" ~ "f080", # "f681", # data 
+                                                  type == "metric" ~ "f1de",# "f548", # ruler 
+                                                  TRUE ~ "f0c8"), #square
+                            icon.face =  "'FontAwesome'",
+                            icon.weight = "bold")
+
+# format edges
+edges <- edges %>% mutate(
+  title = paste0("<p>", detail, "</p>"),
+  #label = type,
+  color = ifelse(str_detect(type, "^increase"), "#81a275", "#617d9f"),
+  color = ifelse(str_detect(type, "^decrease"), "#b14552", color) ) 
+
+
+
+# make directed graph
+visNetwork(nodes=nodes, edges=edges, width = "100%") %>% 
+  visEdges(width=5, color= edges$color, arrows = "to", arrowStrikethrough = F, smooth = T) %>%
+  visNodes(scaling=list(min=40, max=50)) %>%
+  visOptions(highlightNearest = list(enabled = T, degree = 1, hover = T)) %>%
+  visInteraction(hover=TRUE, zoomView = TRUE) %>%
+  #visHierarchicalLayout() %>% 
+  visPhysics(solver = "forceAtlas2Based", forceAtlas2Based = list(gravitationalConstant = -50)) %>%
+  addFontAwesome(name = "font-awesome-visNetwork") %>%
+visLayout(randomSeed = 12) # to have always the same network  
+
+# save datasets to call in Shiny
+#save(nodes, file = here::here("dag", "nodes.RData"))
+#save(edges, file = here::here("dag", "edges.RData"))
+
+}
+```
+
+## The core nodes
+
+```{r dag-core}
+# plot core nodes
+dag_plot(dag %>% filter(core) )
+```
+
+## The whole mess
+```{r dag-whole}
+# plot core nodes
+dag_plot(dag)
+```
+
+# Using the `NetLit` R Package 
+
+
+How do we convert these data into a network object in R? There are multiple packages to work with networks, but the most popular is `igraph` because it's very flexible and easy to do. Other packages that you may want to explore are `sna` and `networks`.
+
+Now, how do we create the igraph object? We can use the `graph_from_data_frame` function, which takes two arguments: `d`, the data frame with the edge list in the first two columns; and `vertices`, a data frame with node data with the node label in the first column. (Note that igraph calls the nodes `vertices`, but it's exactly the same thing.)
+
+The review package from the `netLit` package provides a wrapper for formatting data for igraph. It returns a list of three objects, an `edgelist`, a `nodelist` with basic network statistics (eg betweenness) calculated, and a `graph` object that is the input to more advanced `igraph` functions.
+
+```{r, eval=T, code_folding = "show"}
+#devtools::install_github("judgelord/literature")
+library(literature)
+
+lit <- review(dag)
+
+edges <- lit$edgelist
+kablebox(edges)
+nodes <- lit$nodelist
+kablebox(nodes)
+
+# now with node and edge attributes 
+lit <- review(dag 
+              ,edge_attributes = c("mechanism", "cites", "cites_empirical", "cite_weight", "cite_weight_empirical") 
+              #,node_attributes = node_attributes
+              )
+
+edges <- lit$edgelist
+kablebox(edges)
+nodes <- lit$nodelist
+kablebox(nodes)
+
+# define node name
+nodes$name <- nodes$node
+
+g <- lit$graph
+g
+```
+
+What does it mean?
+
+- `D` means directed  
+- `N` means named graph  
+- `W` means weighted graph  
+- `name (v/c)` means _name_ is a node attribute and it's a character  
+- `cite_weight (e/n)` means _cite_weight_ is an edge attribute and it's numeric  
+
+### 2.1 Practice accessing elements of the network
+
+Practice accessing the following elements of the network: nodes, names of the nodes, attributes of the nodes, edges, weights for each edge, all attributes of the edges, the adjacency matrix, and just the first row of the adjacency matrix.
+
+```{r}
+#V(g)  # nodes
+# V(g)$name %>% head() # names of each node
+vertex_attr(g) %>% as_tibble() %>% kablebox()# all attributes of the nodes
+E(g)  %>% head()# edges
+E(g)$cite_weight  %>% head()# weights for each edge
+edge_attr(g)  %>% as_tibble() %>%  kablebox()# all attributes of the edges
+# g[] %>% head # adjacency matrix
+g[1,] %>% head # first row of adjacency matrix
+```
+
+### 2.2 Network visualization
+
+How can we visualize this network? The `plot()` function works out of the box, but the default options are often not ideal:
+
+```{r}
+par(mar=c(0,0,0,0))
+plot(g)
+```
+
+Improve this figure. To see all the available plotting options, you can check `?igraph.plotting`. Set the vertex color, label colors, the size of the labels, curvature to the edge and edge color to ones different from the default settings and in a way that is visually appealing to you.
+
+```{r}
+par(mar=c(0,0,0,0))
+
+pdf(file="net.pdf")
+plot(g,
+     vertex.color = "grey", # change color of nodes
+     vertex.label.color = "black", # change color of labels
+     vertex.label.cex = .25, # change size of labels to 25% of original size
+     edge.curved=.25, # add a 25% curve to the edges
+     arrow.size = .2,
+     edge.color="grey20") # change edge color to grey
+dev.off()
+
+
+
+```
+
+### With `ggnetwork`
+
+```{r ggnetwork, fig.width=7, fig.height=7}
+# install.packages("ggnetwork")
+library(ggnetwork)
+n <- ggnetwork(g)
+
+library(magrittr)
+
+n$name %<>% str_replace(" ", "\n")
+
+n$name %<>% str_replace(" ([A-z]*)$", "\n\\1")
+
+
+library(magrittr)
+ n$cite_weight %<>%  replace_na(0) 
+ 
+n %<>% mutate(partisan = str_detect(name, "partisan"),
+              empirical = ifelse(!is.na(cites_empirical),
+                                 "Empirical work", 
+                                 "No empirical work"))
+
+n2 <- n %>% filter(partisan) %>% mutate(partisan = FALSE)
+
+n %<>% full_join(n2) %>% mutate(partisan = ifelse(partisan, "Mentions partisanship", "Other nodes"))
+
+set.seed(12)
+
+n$cite_weight %<>% as_factor()
+
+
+p <- ggplot(n) +
+  aes(x = x, y = y, xend = xend, yend = yend,
+      label = name %>% str_to_title()) +
+    geom_nodes(size = 10, alpha = .1) +
+    geom_edges(aes(color = cite_weight, linetype = empirical ),
+               curvature = 0.1, 
+               alpha = .8,
+               #box.padding = unit(1, "lines"),
+             arrow = arrow(length = unit(6, "pt"), type = "closed")) +
+  
+    geom_nodetext_repel(size = 2.3) +
+  theme_blank() + 
+  labs(color = "Number of\nPublications",
+       linetype = "") + 
+  scale_color_viridis_d(option = "plasma", begin = 0, end = .9, direction = -1) 
+
+p
+
+seedplot <- function(seed){
+  set.seed(seed)
+  p
+}
+
+seq <- seq(from = 1, to = 200, by= 50)
+
+#map(seq, seedplot)
+
+
+
+p <-  p + geom_edgetext(aes(label = cites_empirical %>% str_remove(",.*"), 
+                    color = cite_weight),
+                size = 2,
+                alpha = .2) 
+
+p
+```
+
+```{r ggnetwork-partisan, fig.width=14, fig.height=7}
+p + facet_wrap("partisan")
+```
+
+Now modify some of these plotting attributes so that they are function of network properties. For example, a common adjustment is to change the size of the nodes and node labels so that they match their `importance`. 
+
+Here, `strength` will correspond to the number of scenes they appear in. Let the size of the node be determined by the `strength`, and only show the labels of character that appear in 10 or more scenes. Finally change the colors of the node based on what side they're in (dark side or light side) and add an informative legend.
+
+```{r}
+V(g)$size <- strength(g)
+par(mar=c(0,0,0,0)); plot(g)
+
+# taking the log to improve it
+V(g)$size <- log(strength(g)) * 4 + 3
+par(mar=c(0,0,0,0)); plot(g)
+
+V(g)$label <- ifelse( strength(g)>=10, V(g)$name, NA )
+par(mar=c(0,0,0,0)); plot(g)
+
+# what does `ifelse` do?
+nodes$name=="minority rights"
+ifelse(nodes$name=="minority rights", "yes", "no")
+ifelse(grepl("rights", nodes$name), "yes", "no")
+
+#change the colors of each node based on what side they're in (dark side or light side).
+# create vectors with characters in each side
+dark_side <- c("minority rights")
+light_side <- c("")
+# node we'll create a new color variable as a node property
+V(g)$color <- NA
+V(g)$color[V(g)$type == "goal"] <- "red"
+V(g)$color[V(g)$type == "policy"] <- "gold"
+V(g)$color[V(g)$type == "effect"] <- "blue"
+V(g)$color[V(g)$type == "value"] <- "white"
+V(g)$color[V(g)$type == "condition"] <- "green"
+V(g)$color[V(g)$type == "metric"] <- "purple"
+
+V(g)$color[is.na(V(g)$type)] <- "grey20"
+vertex_attr(g) %>% as_tibble()%>% kablebox()
+par(mar=c(0,0,0,0)); plot(g)
+
+# what does %in% do?
+1 %in% c(1,2,3,4)
+1 %in% c(2,3,4)
+
+
+#add a legend.
+par(mar=c(0,0,0,0)); plot(g)
+legend(x=.75, y=.75, legend=c("no type provided in node attributes sheet"), 
+       pch=21, pt.bg=c("grey20"), pt.cex=2, bty="n")
+```
+
+
+Edge properties can also be modified. Set the width of each edge as a function of the log number of studies two concepts appear together. Plot it.
+
+```{r}
+E(g)$width <- log(E(g)$cite_weight) + 1
+edge_attr(g) %>% as_tibble() %>% kablebox()
+par(mar=c(0,0,0,0)); plot(g)
+```
+
+
+## Extra: layouts
+
+Up to now, each time we run the `plot` function, the nodes appear to be in a different location. Why? Because it's running a probabilistic function trying to locate them in the optimal way possible.
+
+However, we can also specify the __layout__ for the plot; that is, the (x,y) coordinates where each node will be placed. `igraph` has a few different layouts built-in, that will use different algorithms to find an `optimal` distribution of nodes. The following code illustrates some of these:
+
+```{r, fig.width=12, fig.height=7}
+par(mfrow=c(2, 3), mar=c(0,0,1,0))
+plot(g, layout=layout_randomly, main="Random")
+plot(g, layout=layout_in_circle, main="Circle")
+plot(g, layout=layout_as_star, main="Star")
+plot(g, layout=layout_as_tree, main="Tree")
+plot(g, layout=layout_on_grid, main="Grid")
+plot(g, layout=layout_with_fr, main="Force-directed")
+```
+
+Note that each of these is actually just a matrix of (x,y) locations for each node.
+
+```{r}
+l <- layout_randomly(g)
+str(l)
+```
+
+The most popular layouts are [force-directed ](https://en.wikipedia.org/wiki/Force-directed_graph_drawing). These algorithms, such as Fruchterman-Reingold, try to position the nodes so that the edges have similar length and there are as few crossing edges as possible. The idea is to generate "clean" layouts, where nodes that are closer to each other share more connections in common that those that are located further apart. Note that this is a non-deterministic algorithm: choosing a different seed will generate different layouts.
+
+```{r, fig.width=12, fig.height=7}
+par(mfrow=c(1,2))
+set.seed(777)
+fr <- layout_with_fr(g, niter=1000)
+par(mar=c(0,0,0,0)); plot(g, layout=fr)
+set.seed(666)
+fr <- layout_with_fr(g, niter=1000)
+par(mar=c(0,0,0,0)); plot(g, layout=fr)
+```
+
+
+## 3 Node properties
+
+Let's look at descriptive statistics at the node level. All of these are in some way measures of importance or __centrality__.
+
+The most basic measure is __degree__, the number of adjacent edges to each node. It is often considered a measure of direct influence. In the redistricting network, it will be the unique number of concepts that each concept is interacting with. Sort the `degree` of the network and print it out. 
+
+```{r}
+sort(-degree(g)) %>% head() %>% kable()
+```
+
+Partisan advantage (degree=14), followed by a three way tie of communities preserved, partisan gerrymandering and compactness (each degree=5) are the most "central" concepts covered in the redistricting literature.
+
+
+In directed graphs, there are three types of degree: indegree (incoming edges), outdegree (outgoing edges), and total degree. You can find these using `mode="in"` or `mode="out"` or `mode="total"`. 
+
+__Strength__ is a weighted measure of degree that takes into account the number of edges that go from one node to another. In this network, it will be the total number of interactions of each concept with any other concept. Sort the `strength` of the network and print it out.
+
+```{r}
+sort(-strength(g))  %>% head() %>% kable()
+```
+
+__Closeness__ measures how many steps are required to access every other node from a given node. It's a measure of how long information takes to arrive (who hears news first?). Higher values mean less centrality. Sort the `closeness` of the network (normalize it) and print it out.
+
+```{r}
+sort(-closeness(g, normalized=TRUE))
+```
+
+Detect gerrymandering, public participation, floor votes align with district preferences, and constitutional tests are closest to all other concepts in the network.
+
+__Betweenness__ measures brokerage or gatekeeping potential. It is (approximately) the number of shortest paths between nodes that pass through a particular node. Sort the `betweenness` of the network and print it out.
+
+```{r}
+sort(-betweenness(g)) %>% head() %>% kable()
+```
+
+Partisan advantage has by far the highest measure of brokerage/gatekeeping potential, followed by number of competitive districts. These two concepts allow for the fastest facilitation of ideas in the redistricting network; in other words, if we were to design a causal story and try to connect two concepts, the fastest way to connect them would most often be through the idea of partisan advantage.
+
+Eigenvector centrality is a measure of being well-connected connected to the well-connected. First eigenvector of the graph adjacency matrix. Only works with undirected networks. Sort the returned *vector* from the `eigen_centrality` of the network and print it out. (not for this application)
+
+```{r, eval=F}
+sort(-eigen_centrality(g)$vector) %>% head() %>% kable()
+```
+
+__Page rank__ approximates probability that any message will arrive to a particular node. This algorithm was developed by Google founders, and originally applied to website links. Sort the returned *vector* from the `page_rank` of the network and print it out.
+
+```{r}
+sort(page_rank(g)$vector)
+```
+
+__Authority score__ is another measure of centrality [initially applied to the Web](https://en.wikipedia.org/wiki/HITS_algorithm). A node has high authority when it is linked by many other nodes that are linking many other nodes. Sort the returned *vector* from the `authority_score` of the network and print it out.
+
+```{r}
+sort(authority_score(g)$vector)
+```
+
+Finally, not exactly a measure of centrality, but we can learn more about who each node is connected to by using the following functions: `neighbors` (for direct neighbors) and `ego` (for neighbors up to `n` neighbors away). Find the neighbors of "partisan advantage". Find the concept's neighbors up to order 2 away.
+
+```{r}
+neighbors(g, v=which(V(g)$name=="partisan advantage"))
+ego(g, order=2, nodes=which(V(g)$name=="partisan advantage"))
+```
+
+## 4 Network properties
+
+Let's now try to describe what a network looks like as a whole. We can start with measures of the __size__ of a network. `diameter` is the length of the longest path (in number of edges) between two nodes. We can use `get_diameter` to identify this path. `mean_distance` is the average number of edges between any two nodes in the network. We can find each of these paths between pairs of edges with `distances`. Find the diameter and mean distances of the network.
+
+```{r}
+diameter(g, directed=TRUE, weights=NA)
+get_diameter(g, directed=TRUE, weights=NA)
+mean_distance(g, directed=TRUE)
+dist <- distances(g, weights=NA)
+dist[1:5, 1:5]
+```
+
+`edge_density` is the proportion of edges in the network over all possible edges that could exist. Find the `edge_density` of the network.
+
+```{r}
+edge_density(g)
+# 22*21 possible edges / 2 because it's undirected = 231 possible edges
+# but only 60 exist
+60/((22*21)/2)
+```
+
+`reciprocity` measures the propensity of each edge to be a mutual edge; that is, the probability that if `i` is connected to `j`, `j` is also connected to `i`. Find the reciprocity of the network -- you should find that it is 1. Explain why you think reciprocity=1 in this case.
+
+```{r}
+reciprocity(g)
+```
+
+`transitivity`, also known as clustering coefficient, measures that probability that adjacent nodes of a network are connected. In other words, if `i` is connected to `j`, and `j` is connected to `k`, what is the probability that `i` is also connected to `k`? Find the transitivity of the network.
+
+```{r}
+transitivity(g)
+```
+
+## 5 Network communities
+
+Networks often have different clusters or communities of nodes that are more densely connected to each other than to the rest of the network. Let's cover some of the different existing methods to identify these communities.
+
+The most straightforward way to partition a network is into __connected components__. Each component is a group of nodes that are connected to each other, but _not_ to the rest of the nodes. For example, this network has two components.
+
+```{r}
+# components(g)
+par(mar=c(0,0,0,0)); plot(g)
+```
+
+Most networks have a single __giant connected component__ that includes most nodes. Most studies of networks actually focus on the giant component (e.g. the shortest path between nodes in a network with two or more component is Inf!).
+
+```{r}
+giant <- decompose(g)[[1]]
+```
+
+Components can be __weakly connected__ (in undirected networks) or __strongly connected (in directed networks, where there is an edge that ends in every single node of that component).
+
+Even within a giant component, there can be different subsets of the network that are more connected to each other than to the rest of the network. The goal of __community detection algorithms__ is to identify these subsets.
+
+There are a few different algorithms, each following a different logic. 
+
+The __walktrap__ algorithm finds communities through a series of short random walks. The idea is that these random walks tend to stay within the same community. The length of these random walks is 4 edges by default, but you may want to experiment with different values. The goal of this algorithm is to identify the partition that maximizes a modularity score.
+
+```{r}
+cluster_walktrap(giant)
+cluster_walktrap(giant, steps=10)
+```
+
+Other methods are:
+
+- The __fast and greedy__ method tries to directly optimize this modularity score.
+- The __infomap__ method attempts to map the flow of information in a network, and the different clusters in which information may get remain for longer periods. Similar to walktrap, but not necessarily maximizing modularity, but rather the so-called "map equation".
+- The __edge-betweenness__ method iteratively removes edges with high betweenness, with the idea that they are likely to connect different parts of the network. Here betweenness (gatekeeping potential) applies to edges, but the intuition is the same.
+- The __label propagation__ method labels each node with unique labels, and then updates these labels by choosing the label assigned to the majority of their neighbors, and repeat this iteratively until each node has the most common labels among its neighbors.
+
+```{r}
+cluster_edge_betweenness(giant)
+cluster_infomap(giant)
+cluster_label_prop(giant)
+```
+
+Infomap tends to work better in most social science examples (websites, social media, classrooms, etc), but fastgreedy is faster.
+
+`igraph` also makes it very easy to plot the resulting communities:
+```{r, eval = FALSE}
+# undirected graphs only
+comm <- cluster_infomap(giant)
+modularity(comm) # modularity score
+par(mar=c(0,0,0,0)); plot(comm, giant)
+```
+
+Alternatively, we can also add the membership to different communities as a color parameter in the `igraph` object.
+```{r, eval = FALSE}
+# for undirected graphs
+V(giant)$color <- membership(comm)
+par(mar=c(0,0,0,0)); plot(giant)
+```
+
+The final way in which we can think about network communities is in terms of hierarchy or structure. We'll discuss one of these methods.
+
+__K-core decomposition__ allows us to identify the core and the periphery of the network. A k-core is a maximal subnet of a network such that all nodes have at least degree K.
+
+```{r, fig.height=5, figh.width=6}
+coreness(g)
+which(coreness(g)==6) # what is the core of the network?
+which(coreness(g)==1) # what is the periphery of the network?
+
+# Visualizing network structure
+V(g)$coreness <- coreness(g)
+par(mfrow=c(2, 3), mar=c(0.1,0.1,1,0.1))
+set.seed(777); fr <- layout_with_fr(g)
+for (k in 1:6){
+  V(g)$color <- ifelse(V(g)$coreness>=k, "orange", "grey")
+  plot(g, main=paste0(k, '-core shell'), layout=fr)
+}
+```
+
+```{r}
+wc <- cluster_walktrap(g)
+modularity(wc)
+membership(wc)
+V(g)$shortname<-V(g)$name #shortened easier to read ver name
+V(g)$shortname[V(g)$shortname=="concentration of likely donors in map-drawing party's districts"]<- "donor concentration"
+V(g)$shortname[V(g)$shortname=="individual legislator voting"]<- "legislator voting"
+V(g)$shortname[V(g)$shortname=="effect of personal vote"]<- "personal vote"
+V(g)$shortname[V(g)$shortname=="detect gerrymandering"]<- "detect gerrymander"
+V(g)$shortname[V(g)$shortname=="proportional minority representation"]<- "prop. minority rep"
+V(g)$shortname[V(g)$shortname=="Number of competitive districts"]<- "no. competitive district"
+V(g)$shortname[V(g)$shortname=="legislator information about district"]<- "legis. info on district"
+V(g)$shortname[V(g)$shortname=="floor votes align with district preferences"]<- "legis. votes with district pref."
+V(g)$shortname[V(g)$shortname=="stability in voters' fellow constituents"]<- "constituent stability"
+V(g)$shortname[V(g)$shortname=="voter information about their district"]<- "voter info on district"
+V(g)$shortname[V(g)$shortname=="legislator information seeking"]<- "legis. info-seek"
+V(g)$shortname[V(g)$shortname=="Alignment of floor vote breakdown with statewide majority of voters"]<- "Floor vote align state voters"
+V(g)$shortname[V(g)$shortname=="number of competitive districts" ]<- "no. competitive district" 
+V(g)$shortname[V(g)$shortname=="House-Senate Delegation alignment" ]<- "Congress-SH align" 
+V(g)$shortname[V(g)$shortname=="unconstitutional government interest"]<- "unconstit gov interest"
+V(g)$shortname[V(g)$shortname=="number of minority representatives"]<- "no. minority reps"
+V(g)$shortname[V(g)$shortname=="representation of majority opinion"]<- "represent majority opinion"
+V(g)$shortname[V(g)$shortname=="elite ideological moderation"]<- "elite ideol moderation"
+V(g)$shortname[V(g)$shortname=="partisan gerrymandering"]<- "partisan gerrymander"
+V(g)$shortname[V(g)$shortname=="legislative majority-seeking behavior"]<- "legis majority-seeking behavior"
+V(g)$shortname[V(g)$shortname=="change in constituency boundaries"]<- "change constituent boundary"
+V(g)$shortname[V(g)$shortname=="demographic and ideological sorting"]<- "demog/ideol sorting"
+V(g)$shortname[V(g)$shortname=="dispersed minority population"]<- "dispersed minority pop"
+V(g)$shortname[V(g)$shortname=="majority minority districts"]<- "majority minority district"
+
+set.seed(123)
+pdf(file=here::here("figs","redistrict_communities.pdf"),width=13,height=13)
+plot(g)
+plot(wc, g, vertex.label=V(g)$shortname,vertex.label.dist=1,vertex.color="gray20")
+dev.off()
+plot(g)
+```
