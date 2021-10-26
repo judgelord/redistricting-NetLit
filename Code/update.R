@@ -93,9 +93,9 @@ save(edges, file = here("data", "edges.RData"))
 write_csv(nodes, here::here("data", "nodes.csv"))
 write_csv(edges, here::here("data", "edges.csv"))
 
-
+library(visNetwork)
 #TODO add static dag in new Rmd file
-visNetwork(nodes=nodes, edges=edges, width = "100%") %>% 
+visNetwork::visNetwork(nodes=nodes, edges=edges, width = "100%") %>% 
   visEdges(width=5, color= edges$color, arrows = "to", arrowStrikethrough = F, smooth = T) %>%
   visNodes(scaling=list(min=40, max=50)) %>%
   visOptions(highlightNearest = list(enabled = T, degree = 1, hover = T)) %>%
