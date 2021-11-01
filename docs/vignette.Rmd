@@ -29,12 +29,9 @@ library(fontawesome)
 
 source(here::here("code", "update.R"))
 
-
-
-#TODO Devin will rename package "NetLit" 
 # The R package files are currently in NetLit/Netlit on dropbox
-#devtools::install_github("judgelord/literature")
-library(literature)
+
+library(NetLit)
 
 knitr::opts_chunk$set(echo = TRUE, 
                       cache = FALSE, 
@@ -67,7 +64,7 @@ node_attributes <- read_csv(here("data", "node_attributes.csv"))
 ```
 
 
-
+# With `visnetowrk`
 ```{r visnetwork}
 
 # all edges
@@ -209,20 +206,57 @@ Now, how do we create the igraph object? We can use the `graph_from_data_frame` 
 
 The review package from the `netLit` package provides a wrapper for formatting data for igraph. It returns a list of three objects, an `edgelist`, a `nodelist` with basic network statistics (eg betweenness) calculated, and a `graph` object that is the input to more advanced `igraph` functions.
 
+Install this package with 
+```
+devtools::install_github("judgelord/NetLit")
+```
+
+This package provides functions to generate network statistics from a literature review. Specifically, it takes `data` where each row is a proposed relationship ("edges") between two concepts or variables ("nodes"). 
+
+## Basic Usage
+
+The `review()` function takes in a dataframe, `data`, that must include `from` and `to` columns (a directed graph structure). 
+
+The package loads example `data` from [this project on redistricting](https://github.com/judgelord/redistricting).
+
+
+```{r}
+data <- dag %>% select(from, to, #edge, 
+               #mechanism, 
+               cites) %>% mutate(cites = cites %>% str_remove(",.*|;.*"))
+
+data
+```
+
+`review()` returns a list of 3: 
+
+1. an `edgelist`
+2. a `nodelist` augmented with a betweenness score from `igraph::degree()`,
+3. `graph`, an 'igraph` object
+
 ```{r, eval=T, code_folding = "show"}
-#devtools::install_github("judgelord/literature")
-library(literature)
+# devtools::install_github("judgelord/NetLit")
+library(NetLit)
 
+review(data = dag)
+```
+
+## Additional Features
+Optional additional columns in the `data` argument may specify edge attributes (for example, in the example data below, `edge`, `mechanism`, and `cites` and attributes of the proposed relationship between the variables specified in the `to` and `from` columns.  
+
+Node attributes may be specified in an optional `node_attributes` argument. `node_attributes` must be a dataframe with a column `node` with values matching the `to` or `from` columns of the `data` argument.
+
+
+```{r}
 lit <- review(dag)
-
 edges <- lit$edgelist
 kablebox(edges)
 nodes <- lit$nodelist
 kablebox(nodes)
 
 # now with node and edge attributes 
-lit <- review(dag 
-              ,edge_attributes = c("mechanism", "cites", "cites_empirical", "cite_weight", "cite_weight_empirical") 
+lit <- review(dag,
+              edge_attributes = c("mechanism", "cites", "cites_empirical", "cite_weight", "cite_weight_empirical") 
               #,node_attributes = node_attributes
               )
 
@@ -230,7 +264,11 @@ edges <- lit$edgelist
 kablebox(edges)
 nodes <- lit$nodelist
 kablebox(nodes)
+```
 
+## igraph object
+
+```{r}
 # define node name
 nodes$name <- nodes$node
 
@@ -245,6 +283,8 @@ What does it mean?
 - `W` means weighted graph  
 - `name (v/c)` means _name_ is a node attribute and it's a character  
 - `cite_weight (e/n)` means _cite_weight_ is an edge attribute and it's numeric  
+
+## `igraph` statistics
 
 ### 2.1 Practice accessing elements of the network
 
@@ -261,7 +301,7 @@ edge_attr(g)  %>% as_tibble() %>%  kablebox()# all attributes of the edges
 g[1,] %>% head # first row of adjacency matrix
 ```
 
-### 2.2 Network visualization
+### 2.2 Network visualization with `igraph::plot()`
 
 How can we visualize this network? The `plot()` function works out of the box, but the default options are often not ideal:
 
