@@ -1,0 +1,103 @@
+node,type
+Alignment of floor vote breakdown with statewide majority of voters,effect
+bipartisan gerrymander,policy
+campaign resource allocation,effect
+campaign spending,effect
+candidate quality,effect
+change in constituency boundaries,condition
+preserve communities of interest,goal
+community,value
+competitiveness,goal
+computers,condition
+concentration of likely donors in map-drawing party's districts,effect
+constituent service,effect
+constitutional test,metric
+contiguity,condition
+core retention,metric
+corporate bias,effect
+sorting,condition
+detect gerrymandering,goal
+dispersed minority population,condition
+divided government,condition
+effect of personal vote,effect
+electoral competition,effect
+electoral security,effect
+electorate composition change,condition
+elite bias,effect
+elite ideological moderation,effect
+equal population,metric
+executive veto over maps,policy
+floor votes align with district preferences,effect
+floor voting extremism,effect
+geographic clustering,condition
+geographic continuity,value
+geographic polarization,effect
+historical continuity,value
+House-Senate Delegation alignment,effect
+incumbent advantage,effect
+incumbent stays,policy
+incumbent turnover,metric
+incumbent vote share,effect
+incumbent's constituents change,effect
+independent executive,condition
+individual legislator voting,effect
+instability,effect
+institutional power,effect
+interracial coalitions,effect
+judicial review,policy
+legislative effort,effect
+legislative majority-seeking behavior,effect
+legislative outcomes,effect
+legislator information about district,effect
+legislator information seeking,effect
+legislator voting,effect
+length in office,effect
+maintaining communities,value
+majority,effect
+majority bias,effect
+majority minority districts,policy
+majority-minority districts,policy
+material benefits for minorities,effect
+mean-median vote comparison,metric
+minority influence districts,policy
+minority representation,effect
+minority rights,value
+minority substantive representation,effect
+multiple criteria,metric
+Number of competitive districts,goal
+number of districts with competitive primaries,effect
+number of minority representatives,effect
+partisan advantage,goal
+partisan electoral advantage,goal
+partisan gerrymandering,condition
+performative extremism,effect
+performative representation,effect
+personal vote,effect
+pork spending,policy
+preserve communities of interest vs. Number of competitive districts,tradeoff
+preserve municipal jurisdictions,goal
+proportion of minority voters (in a district),condition
+proportional minority representation,goal
+proportionality,goal
+public participation,goal
+race-partisanship correlation,condition
+redistricting,condition
+redistricting by courts,policy
+redistricting commission,policy
+representation of majority opinion,effect
+rolloff,effect
+single member districts,condition
+social network,condition
+split ticket voting,effect
+stability in voters' fellow constituents,effect
+the number of marginal seats,metric
+the proportion of contested seats,metric
+turnout,effect
+unconstitutional government interest,value
+upcoming redistricting,condition
+vote outcome,effect
+voter information about their district,effect
+voter recall,effect
+voter sense of place,effect
+voter turnout,effect
+elite polarization,effect

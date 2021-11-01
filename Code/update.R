@@ -19,7 +19,8 @@ if(gs4_has_token()){
   
   node_attributes <-  googledrive::drive_get("redistricting vars") %>%
     gs4_get() %>% 
-    read_sheet("DAG_node_attributes") 
+    read_sheet("DAG_node_attributes") %>% 
+    distinct()
   
   node_attributes %>% write_csv(here("data", "node_attributes.csv"))
   
@@ -41,7 +42,7 @@ lit <- review(dag,
                                   "cites_empirical", 
                                   "cite_weight", 
                                   "cite_weight_empirical"), 
-              node_attributes = node_attributes)
+              node_attributes = node_attributes %>% distinct())
 
 
 

@@ -1,0 +1,52 @@
+node,type,degree,betweenness,label,id,icon.size,title,level,shape,icon.color,icon.code,icon.face,icon.weight
+detect gerrymandering,goal,2,0,detect gerrymandering,detect gerrymandering,42,<p>goal: detect gerrymandering</p>,1,icon,black,f24e,'FontAwesome',bold
+public participation,goal,1,0,public participation,public participation,41,<p>goal: public participation</p>,2,icon,black,f24e,'FontAwesome',bold
+floor votes align with district preferences,effect,2,0,floor votes align with district preferences,floor votes align with district preferences,42,<p>effect: floor votes align with district preferences</p>,3,icon,black,f080,'FontAwesome',bold
+preserve communities of interest,goal,1,96,preserve communities of interest,preserve communities of interest,41,<p>goal: preserve communities of interest</p>,2,icon,black,f24e,'FontAwesome',bold
+proportionality,goal,1,18,proportionality,proportionality,41,<p>goal: proportionality</p>,1,icon,black,f24e,'FontAwesome',bold
+number of competitive districts,NA,4,85.5,number of competitive districts,number of competitive districts,44,<p> number of competitive districts</p>,NA,icon,black,f0c8,'FontAwesome',bold
+efficiency gap,NA,3,0,efficiency gap,efficiency gap,43,<p> efficiency gap</p>,NA,icon,black,f0c8,'FontAwesome',bold
+constitutional test,metric,2,0,constitutional test,constitutional test,42,<p>metric: constitutional test</p>,4,icon,black,f1de,'FontAwesome',bold
+unconstitutional government interest,value,1,0,unconstitutional government interest,unconstitutional government interest,41,<p>value: unconstitutional government interest</p>,3,icon,black,f004,'FontAwesome',bold
+instability,effect,1,0,instability,instability,41,<p>effect: instability</p>,4,icon,black,f080,'FontAwesome',bold
+elite polarization,effect,4,0,elite polarization,elite polarization,44,<p>effect: elite polarization</p>,3,icon,black,f080,'FontAwesome',bold
+number of minority representatives,effect,1,0,number of minority representatives,number of minority representatives,41,<p>effect: number of minority representatives</p>,4,icon,black,f080,'FontAwesome',bold
+partisan advantage,goal,5,98.5,partisan advantage,partisan advantage,45,<p>goal: partisan advantage</p>,1,icon,black,f24e,'FontAwesome',bold
+voter turnout,effect,2,0,voter turnout,voter turnout,42,<p>effect: voter turnout</p>,4,icon,black,f080,'FontAwesome',bold
+partisan gerrymandering,condition,2,68,partisan gerrymandering,partisan gerrymandering,42,<p>condition: partisan gerrymandering</p>,3,icon,black,f205,'FontAwesome',bold
+partisan donor advantage,NA,1,0,partisan donor advantage,partisan donor advantage,41,<p> partisan donor advantage</p>,NA,icon,black,f0c8,'FontAwesome',bold
+legislator voting,effect,2,0,legislator voting,legislator voting,42,<p>effect: legislator voting</p>,3,icon,black,f080,'FontAwesome',bold
+legislative outcomes,effect,1,0,legislative outcomes,legislative outcomes,41,<p>effect: legislative outcomes</p>,4,icon,black,f080,'FontAwesome',bold
+incumbent vote share,effect,1,0,incumbent vote share,incumbent vote share,41,<p>effect: incumbent vote share</p>,3,icon,black,f080,'FontAwesome',bold
+personal vote,effect,1,0,personal vote,personal vote,41,<p>effect: personal vote</p>,4,icon,black,f080,'FontAwesome',bold
+pork spending,policy,1,0,pork spending,pork spending,41,<p>policy: pork spending</p>,3,icon,black,f0e3,'FontAwesome',bold
+voter sense of place,effect,1,0,voter sense of place,voter sense of place,41,<p>effect: voter sense of place</p>,4,icon,black,f080,'FontAwesome',bold
+rolloff,effect,2,0,rolloff,rolloff,42,<p>effect: rolloff</p>,3,icon,black,f080,'FontAwesome',bold
+voter recall,effect,1,0,voter recall,voter recall,41,<p>effect: voter recall</p>,4,icon,black,f080,'FontAwesome',bold
+split ticket voting,effect,1,0,split ticket voting,split ticket voting,41,<p>effect: split ticket voting</p>,3,icon,black,f080,'FontAwesome',bold
+campaign resource allocation,effect,1,0,campaign resource allocation,campaign resource allocation,41,<p>effect: campaign resource allocation</p>,4,icon,black,f080,'FontAwesome',bold
+stability in voters' fellow constituents,effect,1,9,stability in voters' fellow constituents,stability in voters' fellow constituents,41,<p>effect: stability in voters' fellow constituents</p>,3,icon,black,f080,'FontAwesome',bold
+voter information about their district,effect,1,18,voter information about their district,voter information about their district,41,<p>effect: voter information about their district</p>,4,icon,black,f080,'FontAwesome',bold
+floor votes align with state preferences,NA,1,0,floor votes align with state preferences,floor votes align with state preferences,41,<p> floor votes align with state preferences</p>,NA,icon,black,f0c8,'FontAwesome',bold
+House-Senate Delegation alignment,effect,1,10,House-Senate Delegation alignment,House-Senate Delegation alignment,41,<p>effect: House-Senate Delegation alignment</p>,4,icon,black,f080,'FontAwesome',bold
+minority representation,effect,1,0,minority representation,minority representation,41,<p>effect: minority representation</p>,3,icon,black,f080,'FontAwesome',bold
+compactness,NA,1,0,compactness,compactness,41,<p> compactness</p>,NA,icon,black,f0c8,'FontAwesome',bold
+equal population,metric,1,0,equal population,equal population,41,<p>metric: equal population</p>,3,icon,black,f1de,'FontAwesome',bold
+representation of majority opinion,effect,1,0,representation of majority opinion,representation of majority opinion,41,<p>effect: representation of majority opinion</p>,4,icon,black,f080,'FontAwesome',bold
+elite ideological moderation,effect,1,0,elite ideological moderation,elite ideological moderation,41,<p>effect: elite ideological moderation</p>,3,icon,black,f080,'FontAwesome',bold
+competitiveness,goal,2,2,competitiveness,competitiveness,42,<p>goal: competitiveness</p>,2,icon,black,f24e,'FontAwesome',bold
+legislative majority-seeking behavior,effect,1,0,legislative majority-seeking behavior,legislative majority-seeking behavior,41,<p>effect: legislative majority-seeking behavior</p>,3,icon,black,f080,'FontAwesome',bold
+partisan dislocation,NA,1,0,partisan dislocation,partisan dislocation,41,<p> partisan dislocation</p>,NA,icon,black,f0c8,'FontAwesome',bold
+computers,condition,0,0,computers,computers,40,<p>condition: computers</p>,3,icon,black,f205,'FontAwesome',bold
+legislator information about district,effect,0,0,legislator information about district,legislator information about district,40,<p>effect: legislator information about district</p>,4,icon,black,f080,'FontAwesome',bold
+mean-median vote comparison,metric,0,0,mean-median vote comparison,mean-median vote comparison,40,<p>metric: mean-median vote comparison</p>,3,icon,black,f1de,'FontAwesome',bold
+majority minority districts,policy,0,0,majority minority districts,majority minority districts,40,<p>policy: majority minority districts</p>,4,icon,black,f0e3,'FontAwesome',bold
+redistricting commission,policy,0,0,redistricting commission,redistricting commission,40,<p>policy: redistricting commission</p>,3,icon,black,f0e3,'FontAwesome',bold
+change in constituency boundaries,condition,0,0,change in constituency boundaries,change in constituency boundaries,40,<p>condition: change in constituency boundaries</p>,4,icon,black,f205,'FontAwesome',bold
+sorting,condition,0,0,sorting,sorting,40,<p>condition: sorting</p>,3,icon,black,f205,'FontAwesome',bold
+contiguity,condition,0,0,contiguity,contiguity,40,<p>condition: contiguity</p>,4,icon,black,f205,'FontAwesome',bold
+electorate composition change,condition,0,0,electorate composition change,electorate composition change,40,<p>condition: electorate composition change</p>,3,icon,black,f205,'FontAwesome',bold
+incumbent's constituents change,effect,0,0,incumbent's constituents change,incumbent's constituents change,40,<p>effect: incumbent's constituents change</p>,4,icon,black,f080,'FontAwesome',bold
+geographic clustering,condition,0,0,geographic clustering,geographic clustering,40,<p>condition: geographic clustering</p>,3,icon,black,f205,'FontAwesome',bold
+redistricting by courts,policy,0,0,redistricting by courts,redistricting by courts,40,<p>policy: redistricting by courts</p>,4,icon,black,f0e3,'FontAwesome',bold
+upcoming redistricting,condition,0,0,upcoming redistricting,upcoming redistricting,40,<p>condition: upcoming redistricting</p>,3,icon,black,f205,'FontAwesome',bold
