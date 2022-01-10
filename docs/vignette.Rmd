@@ -169,6 +169,21 @@ Additional columns in the redistricting literature data include discriptions of 
 # load expanded dataset
 literature <- read_csv(here::here("data", "literature.csv")) 
 
+# clean up text for better visualization 
+literature %<>% 
+  mutate(cites = cites %>% str_remove(",.*|;.*"))
+
+literature$to %<>% str_replace(" ", "\n") %>% str_replace(" ([A-z]*)$", "\n\\1") %>% str_to_title()
+
+literature$from %<>% str_replace(" ", "\n") %>% str_replace(" ([A-z]*)$", "\n\\1")%>% str_to_title()
+
+literature$cite_weight %<>%  replace_na(0) %>% as_factor()
+
+literature %<>% mutate(partisan = str_c(to, from) %>% str_detect("partisan"),
+              empirical = ifelse(!is.na(cites_empirical),
+                                 "Empirical work", 
+                                 "No empirical work"))
+
 # now with all node and edge attributes 
 lit <- review(literature,
               edge_attributes = names(literature),
@@ -231,20 +246,6 @@ library(ggnetwork)
 # use ggnetwork to tranform the igraph object into tidy data
 n <- ggnetwork(g)
 
-# clean up text for better visualization 
-n %<>% 
-  mutate(cites = cites %>% str_remove(",.*|;.*"))
-
-n$name %<>% str_replace(" ", "\n")
-
-n$name %<>% str_replace(" ([A-z]*)$", "\n\\1")
-
- n$cite_weight %<>%  replace_na(0) 
- 
-n %<>% mutate(partisan = str_detect(name, "partisan"),
-              empirical = ifelse(!is.na(cites_empirical),
-                                 "Empirical work", 
-                                 "No empirical work"))
 
 n2 <- n %>% filter(partisan) %>% mutate(partisan = FALSE)
 
@@ -289,6 +290,48 @@ Facets retain node position:
 
 ```{r ggnetwork-partisan, fig.width=14, fig.height=7}
 p + facet_wrap("partisan")
+```
+
+
+
+---
+
+
+### With `gggraph`
+
+We can also plot using the package `ggraph` package to plot the `igraph` object.
+
+This package allows us to plot self-ties, but it is more difficult to use ggplot features (e.g. colors and legend labels).
+
+```{r ggraph, fig.width=10, fig.height=7}
+# install.packages("ggraph")
+library(ggraph)
+
+set.seed(12)
+
+ggraph(g, layout = 'fr') + 
+  geom_node_point(size = 10, 
+                  alpha = .1) + 
+  geom_edge_arc2(aes(#start_cap = label_rect(node1.name),
+    end_cap = circle(5, 'mm'),
+                     #end_cap = label_rect(node2.name),
+                     color = cite_weight,
+                    linetype = empirical),
+                #alpha = .8,
+                curvature = .1,
+                arrow = arrow(length = unit(2, 'mm'), type = "closed")) + 
+  geom_node_text(aes(label = name), 
+                 size = 2.3) + 
+  geom_edge_loop(aes(color = cite_weight)) +#color = "red") + 
+  theme_blank() + 
+  theme(legend.position="bottom") + 
+  labs(color = "Number of\nPublications",
+       linetype = "") + 
+  #FIXME color scale
+  scale_color_viridis_d(option = "plasma", begin = 0, end = .9, direction = -1) 
+
+
+
 ```
 
 ---
