@@ -175,9 +175,11 @@ literature %<>%
 
 literature$to %<>% str_replace(" ", "\n") %>% str_replace(" ([A-z]*)$", "\n\\1") %>% str_to_title()
 
-literature$from %<>% str_replace(" ", "\n") %>% str_replace(" ([A-z]*)$", "\n\\1")%>% str_to_title()
+literature$from %<>% str_replace(" ", "\n") %>% str_replace(" ([A-z]*)$", "\n\\1") %>% str_to_title()
 
-literature$cite_weight %<>%  replace_na(0) %>% as_factor()
+#literature %<>% drop_na(cite_weight)
+
+literature$cite_weight %<>%  replace_na(0) # %>% as_factor()
 
 literature %<>% mutate(partisan = str_c(to, from) %>% str_detect("partisan"),
               empirical = ifelse(!is.na(cites_empirical),
@@ -225,7 +227,7 @@ plot(g)
 
 For plotting options, you can check `?igraph.plotting`. For example, we can set the vertex color, label colors, the size of the labels, curvature to the edge and edge color.
 
-```{r}
+```{r igraph-plot, fig.width=10, fig.height=7}
 plot(g,
      vertex.color = "grey", # change color of nodes
      vertex.label.color = "black", # change color of labels
@@ -314,21 +316,27 @@ ggraph(g, layout = 'fr') +
                   alpha = .1) + 
   geom_edge_arc2(aes(#start_cap = label_rect(node1.name),
     end_cap = circle(5, 'mm'),
-                     #end_cap = label_rect(node2.name),
-                     color = cite_weight,
-                    linetype = empirical),
-                #alpha = .8,
-                curvature = .1,
-                arrow = arrow(length = unit(2, 'mm'), type = "closed")) + 
+    color = cite_weight %>% as_factor(),
+    linetype = empirical),
+    #alpha = .8,
+    curvature = .1,
+    arrow = arrow(length = unit(2, 'mm'), 
+                  type = "closed")) + 
+    geom_edge_loop(aes(color = cite_weight %>% as_factor()
+                     )) +#color = "red") + 
   geom_node_text(aes(label = name), 
                  size = 2.3) + 
-  geom_edge_loop(aes(color = cite_weight)) +#color = "red") + 
   theme_blank() + 
-  theme(legend.position="bottom") + 
+  theme(legend.position="bottom",
+        legend.title = element_blank() # element_text("Publications")
+        ) + 
   labs(color = "Number of\nPublications",
        linetype = "") + 
+  #scale_edge_color_manual(values = "blues")
   #FIXME color scale
-  scale_color_viridis_d(option = "plasma", begin = 0, end = .9, direction = -1) 
+scale_edge_color_viridis(discrete = TRUE,
+                         option = "plasma", begin = 0, end = .9, direction = -1) 
+
 
 
 
@@ -341,7 +349,7 @@ ggraph(g, layout = 'fr') +
 ```{r ggnetwork-centrality}
 p <- ggplot(n) +
   aes(x = x, y = y, xend = xend, yend = yend,
-      label = name %>% str_to_title()) +
+      label = name) +
     geom_nodes(size = 10, alpha = .1) +
     geom_edges(aes(color = cite_weight, linetype = empirical ),
                curvature = 0.1, 
