@@ -1,23 +1,22 @@
 ---
-title: "NetLit  Vignette"
+title: "netlit  Vignette"
 subtitle: "Redistricting Literature"
 author:
 output:
-    # pdf_document:
-    #   toc: true
-    #   keep_tex: true
     html_document:
       highlight: zenburn
       toc: true
       toc_float: true
       code_folding: hide
+    #   toc: true
+    #   keep_tex: true
+    # pdf_document:
 editor_options: 
   chunk_output_type: console
 ---
 
 
 ```{r setup, include=FALSE}
-
 library(here)
 library(tidyverse)
 library(visNetwork)
@@ -31,7 +30,7 @@ source(here::here("code", "update.R"))
 
 # The R package files are currently in NetLit/Netlit on dropbox
 
-library(NetLit)
+library(netlit)
 
 knitr::opts_chunk$set(echo = TRUE, 
                       cache = FALSE, 
@@ -54,77 +53,320 @@ kablebox <- . %>%
 ```
 
 
-# Data
+# Network Analysis of the Redistricting Literature Data
 
 ```{r data}
 # load data
-dag <- read_csv(here("Data",  "dag.csv")) %>% filter(cite_weight > 0)
+literature <- here("Data",  "literature.csv") %>% 
+  read_csv() %>% 
+  filter(cite_weight > 0)
 
 node_attributes <- read_csv(here("data", "node_attributes.csv"))
 ```
 
 
-# With `visnetowrk`
+There are multiple packages to work with networks, but the most popular is `igraph` because it's flexible and easy. Other packages include `sna` and `networks`.
+
+To use igraph functions, we first need to create an `igraph` object. We can use the `graph_from_data_frame` function, which takes two arguments: `d`, a data frame with the edge list in the first two columns; and `vertices`, a data frame with node data with the node label in the first column. (igraph calls the nodes `vertices`, but it's exactly the same thing.)
+
+```{r}
+g <- graph_from_data_frame(d = literature %>% 
+                        dplyr::select(from, to, everything())#, vertices =  node_attributes
+                      )
+
+g
+ 
+# attributes of the nodes
+vertex_attr(g) %>% 
+  as_tibble() %>% 
+  kablebox()
+```
+
+From this `igraph` object, one can use `igraph` functions to generate network statistics. However, this involves several steps and the output is not tidy. To simplify generating network statistics from literature reviews, we introduce the `netlit` package. 
+
+# Using the `netlit` R Package 
+
+
+The `netlit`  package provides functions to generate network statistics from a literature review. Specifically, `netlit` provides a wrapper for `igraph` functions to facilitate using network analysis in literature reviews. 
+
+
+Install this package with 
+```
+devtools::install_github("judgelord/netlit")
+```
+
+To install `netlit` from CRAN, run the following:
+
+```{r, eval=FALSE}
+install.packages("netlit")
+```
+
+## Basic Usage
+
+The `review()` function takes in a dataframe, `data`, that includes `from` and `to` columns (a directed graph structure). 
+
+In the example below, we use example data from [this project on redistricting](https://github.com/judgelord/redistricting). These data are a set of related concepts (`from` and `to`) in the redistricting literature and citations for these relationships (`cites` and `cites_empirical`). See `vignette("netlit")` for more details on this example.
+
+```{r}
+library(netlit)
+
+data("literature")
+
+head(literature)
+```
+
+`netlit` offers four functions: `make_edgelist()`, `make_nodelist()`, `augment_nodelist()`, and `review()`. 
+
+`review()` is the primary function (and probably the only one you need). The others are helper functions that perform the individual steps that `review()` does all at once. `review()` takes in a dataframe with at least two columns representing linked concepts (e.g., a cause and an effect) and returns data augmented with network statistics. Users must either specify "from" nodes and "to" nodes with the `from` and `to` arguments or include columns named `from` and `to` in the supplied `data` object.
+
+`review()` returns a list of three objects: 
+
+1. an augmented `edgelist` (a list of relationships with `edge_betweenness` calculated), 
+2. an augmented `nodelist` (a list of concepts with `degree` and `betweenness` calculated), and 
+3. a `graph` object suitable for use in other `igraph` functions or other network visualization packages. 
+
+Users may wish to include edge attributes (e.g., information about the relationship between the two concepts) or node attributes (information about each concept). We show how to do so below. But first, consider the basic use of `review()`: 
+
+
+```{r}
+lit <- review(literature, from = "from", to = "to")
+
+lit
+
+head(lit$edgelist)
+
+head(lit$nodelist)
+```
+
+Edge and node attributes can be added using the `edge_attributes` and `node_attributes` arguments. `edge_attributes` is a vector that identifies columns in the supplied data frame that the user would like to retain. `node_attributes` is a separate dataframe that contains attributes for each node in the primary data set. The example `node_attributes` data include one column `type` indicating a type for each each node/variable/concept. 
+
+```{r}
+data("node_attributes")
+
+head(node_attributes)
+
+lit <- review(literature,
+              edge_attributes = c("cites", "cites_empirical"),
+              node_attributes = node_attributes)
+
+lit
+
+head(lit$edgelist)
+
+head(lit$nodelist)
+```
+
+Tip: to retain all variables from `literature`, use `edge_attributes = names(literature)`.
+
+
+## More Advanced Uses
+
+Additional columns in the redistricting literature data include discriptions of the `edge` (the relationship between the `to` and `from` concepts), the theorized `mechanism`, and `cite_weight`---the number of studies in the literature that cite that that causal relationship.  
+
+### A Larger Edgelist and Nodelist
+
+```{r}
+# load expanded dataset
+literature <- read_csv(here::here("data", "literature.csv")) 
+
+# now with all node and edge attributes 
+lit <- review(literature,
+              edge_attributes = names(literature),
+              node_attributes = node_attributes
+              )
+
+edges <- lit$edgelist
+kablebox(edges)
+
+nodes <- lit$nodelist
+kablebox(nodes)
+```
+
+### The `igraph` object
+
+```{r}
+# define igraph object as g
+g <- lit$graph
+g
+```
+
+What does it mean?
+
+- `D` means directed  
+- `N` means named graph  
+- `W` means weighted graph  
+- `name (v/c)` means _name_ is a node attribute and it's a character  
+- `cite_weight (e/n)` means _cite_weight_ is an edge attribute and it's numeric  
+
+---
+
+### Network visualization with `igraph::plot()`
+
+The `plot()` function works out of the box, but the default options are often not ideal:
+
+```{r}
+plot(g)
+```
+
+For plotting options, you can check `?igraph.plotting`. For example, we can set the vertex color, label colors, the size of the labels, curvature to the edge and edge color.
+
+```{r}
+plot(g,
+     vertex.color = "grey", # change color of nodes
+     vertex.label.color = "black", # change color of labels
+     vertex.label.cex = .25, # change size of labels to 25% of original size
+     edge.curved=.25, # add a 25% curve to the edges
+     arrow.size = .2,
+     edge.color="grey20") # change edge color to grey
+```
+
+### With `ggnetwork`
+
+We can also plot using the package `ggnetwork` to tidy the `igraph` object so that we can use ggplot.
+
+```{r ggnetwork, fig.width=10, fig.height=7}
+# install.packages("ggnetwork")
+library(ggnetwork)
+
+# use ggnetwork to tranform the igraph object into tidy data
+n <- ggnetwork(g)
+
+# clean up text for better visualization 
+n %<>% 
+  mutate(cites = cites %>% str_remove(",.*|;.*"))
+
+n$name %<>% str_replace(" ", "\n")
+
+n$name %<>% str_replace(" ([A-z]*)$", "\n\\1")
+
+ n$cite_weight %<>%  replace_na(0) 
+ 
+n %<>% mutate(partisan = str_detect(name, "partisan"),
+              empirical = ifelse(!is.na(cites_empirical),
+                                 "Empirical work", 
+                                 "No empirical work"))
+
+n2 <- n %>% filter(partisan) %>% mutate(partisan = FALSE)
+
+n %<>% full_join(n2) %>% mutate(partisan = ifelse(partisan, "Mentions partisanship", "Other nodes"))
+
+set.seed(12)
+
+n$cite_weight %<>% as_factor()
+
+# plot tidy network data
+p <- ggplot(n) +
+  aes(x = x, y = y, xend = xend, yend = yend,
+      label = name %>% str_to_title()) +
+    geom_nodes(size = 10, alpha = .1) +
+    geom_edges(aes(color = cite_weight, linetype = empirical ),
+               curvature = 0.1, 
+               alpha = .8,
+               #box.padding = unit(1, "lines"),
+             arrow = arrow(length = unit(6, "pt"), type = "closed")) +
+  
+    geom_nodetext_repel(size = 2.3) +
+  theme_blank() + 
+  labs(color = "Number of\nPublications",
+       linetype = "") + 
+  scale_color_viridis_d(option = "plasma", begin = 0, end = .9, direction = -1) + 
+  theme(legend.position="bottom")
+
+p
+
+# with edge text 
+p <-  p + geom_edgetext(aes(label = cites_empirical %>% str_remove(",.*"), 
+                    color = cite_weight),
+                size = 2,
+                alpha = .2) 
+
+p
+```
+
+---
+
+Facets retain node position:
+
+```{r ggnetwork-partisan, fig.width=14, fig.height=7}
+p + facet_wrap("partisan")
+```
+
+---
+
+### Centrality
+
+```{r ggnetwork-centrality}
+p <- ggplot(n) +
+  aes(x = x, y = y, xend = xend, yend = yend,
+      label = name %>% str_to_title()) +
+    geom_nodes(size = 10, alpha = .1) +
+    geom_edges(aes(color = cite_weight, linetype = empirical ),
+               curvature = 0.1, 
+               alpha = .8,
+               #box.padding = unit(1, "lines"),
+             arrow = arrow(length = unit(6, "pt"), type = "closed")) +
+  
+    geom_nodetext_repel(size = 2.3) +
+  theme_blank() + 
+  labs(color = "Number of\nPublications",
+       linetype = "") + 
+  scale_color_viridis_d(option = "plasma", begin = 0, end = .9, direction = -1) + 
+  theme(legend.position="bottom")
+```
+
+Now modify some of these plotting attributes so that they are function of network properties. For example, a common adjustment is to change the size of the nodes and node labels so that they match their importance. 
+
+Here, `centrality` 
+
+### Betweenness
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## With `visnetowrk`
 ```{r visnetwork}
 
-# all edges
-edges <- lit$edgelist %>% 
-  mutate(
-    detail = paste(edge, mechanism, cites, sep = "<br>") %>% str_remove_all("NA"),
-    type = edge,
-    title = paste0("<p>", detail, "</p>"),
-    #label = type,
-    color = ifelse(str_detect(type, "^increase"), "#81a275", "#617d9f"),
-    color = ifelse(str_detect(type, "^decrease"), "#b14552", color),
-    value = cite_weight) %>%
-  distinct()
+library(visNetwork)
 
-core <- edges %>% filter(core, !is.na(cites))
-
-cited <- edges %>% filter(cite_weight>0)
-
-
-
-# node attributes
-nodes <- lit$nodelist %>% mutate(label = node, 
-                                 id = node,
-                                 # scale nodes by degree
-                                 icon.size = degree + 40,
-                                 title = paste0("<p>", type, ": ", label,"</p>") %>% str_remove("NA:"),
-                                 # levels in case we want Hierarchical Layout
-                                 level = ifelse(type == "goal", 1:2, 3:4),
-                                 # FontAwesome.com shapes for fun
-                                 shape = "icon",
-                                 icon.color = case_when(node %in% c(cited$to, cited$from) ~ "black",
-                                                        !node %in% c(cited$to, cited$from) ~ "grey"),
-                                 icon.code = case_when(type == "condition" ~ "f205", # chess board
-                                                       type == "goal" ~ "f24e", # scale  "f05b", # crosshairs
-                                                       type == "policy" ~ "f0e3", # gavel
-                                                       type == "value" ~ "f004", # "f4be", # hand with heart
-                                                       type == "effect" ~ "f080", # "f681", # data 
-                                                       type == "metric" ~ "f1de",# "f548", # ruler 
-                                                       TRUE ~ "f0c8"), #square
-                                 icon.face =  "'FontAwesome'",
-                                 icon.weight = "bold")
-
-# OLD CODE - REPLACE 
 
 # define function to plot
-dag_plot <- function(dag){
-node <- c(dag$from,
-           dag$to)
+literature_plot <- function(lit){
 
-nodes <- tibble(id = node %>% str_remove(".* - "),
-                type = node %>% str_remove(" - .*")) %>% 
+  nodes <- lit$nodelist %>%
+    mutate(id = node) %>% 
   filter(!is.na(id)) %>%
   distinct() %>%
     # removed nodes with multiple types
   add_count(id) %>% 
   filter(n == 1)
 
-edges <- dag %>% transmute(
-  from = from %>% str_remove(".* - "),
-  to = to %>% str_remove(".* - "),
+edges <- lit$edgelist %>% transmute(
+  from = from,
+  to = to,
   detail = paste(edge, mechanism, cites, sep = "<br>") %>% str_remove_all("NA"), 
   type = edge
 ) %>% 
@@ -133,10 +375,8 @@ edges <- dag %>% transmute(
 
 
 
-# calculate betweeness in order to scale nodes
-graph <- igraph::graph.data.frame(edges, directed = T)
-degree_value <- degree(graph, mode = "in")
-nodes$icon.size <- degree_value[match(nodes$id, names(degree_value))] + 40
+# use betweeness to scale nodes
+nodes$icon.size <-nodes$betweenness
 
 # add attributes
 nodes <- nodes %>% mutate(label = id, 
@@ -176,328 +416,43 @@ visNetwork(nodes=nodes, edges=edges, width = "100%") %>%
   visPhysics(solver = "forceAtlas2Based", forceAtlas2Based = list(gravitationalConstant = -50)) %>%
   addFontAwesome(name = "font-awesome-visNetwork") %>%
 visLayout(randomSeed = 12) # to have always the same network  
-
-# save datasets to call in Shiny
-#save(nodes, file = here::here("dag", "nodes.RData"))
-#save(edges, file = here::here("dag", "edges.RData"))
-
 }
 ```
 
-## The core nodes
+### The core nodes
 
 ```{r dag-core}
+core <- literature %>% filter(core)
+
+core %<>% review(
+  edge_attributes = names(core),
+  node_attributes = node_attributes)
+
 # plot core nodes
-dag_plot(dag %>% filter(core) )
+literature_plot(core)
 ```
 
-## The whole mess
+### The whole mess
 ```{r dag-whole}
 # plot core nodes
-dag_plot(dag)
-```
-
-# Using the `NetLit` R Package 
-
-
-How do we convert these data into a network object in R? There are multiple packages to work with networks, but the most popular is `igraph` because it's very flexible and easy to do. Other packages that you may want to explore are `sna` and `networks`.
-
-Now, how do we create the igraph object? We can use the `graph_from_data_frame` function, which takes two arguments: `d`, the data frame with the edge list in the first two columns; and `vertices`, a data frame with node data with the node label in the first column. (Note that igraph calls the nodes `vertices`, but it's exactly the same thing.)
-
-The review package from the `netLit` package provides a wrapper for formatting data for igraph. It returns a list of three objects, an `edgelist`, a `nodelist` with basic network statistics (eg betweenness) calculated, and a `graph` object that is the input to more advanced `igraph` functions.
-
-Install this package with 
-```
-devtools::install_github("judgelord/NetLit")
-```
-
-This package provides functions to generate network statistics from a literature review. Specifically, it takes `data` where each row is a proposed relationship ("edges") between two concepts or variables ("nodes"). 
-
-## Basic Usage
-
-The `review()` function takes in a dataframe, `data`, that must include `from` and `to` columns (a directed graph structure). 
-
-The package loads example `data` from [this project on redistricting](https://github.com/judgelord/redistricting).
-
-
-```{r}
-data <- dag %>% select(from, to, #edge, 
-               #mechanism, 
-               cites) %>% mutate(cites = cites %>% str_remove(",.*|;.*"))
-
-data
-```
-
-`review()` returns a list of 3: 
-
-1. an `edgelist`
-2. a `nodelist` augmented with a betweenness score from `igraph::degree()`,
-3. `graph`, an 'igraph` object
-
-```{r, eval=T, code_folding = "show"}
-# devtools::install_github("judgelord/NetLit")
-library(NetLit)
-
-review(data = dag)
-```
-
-## Additional Features
-Optional additional columns in the `data` argument may specify edge attributes (for example, in the example data below, `edge`, `mechanism`, and `cites` and attributes of the proposed relationship between the variables specified in the `to` and `from` columns.  
-
-Node attributes may be specified in an optional `node_attributes` argument. `node_attributes` must be a dataframe with a column `node` with values matching the `to` or `from` columns of the `data` argument.
-
-
-```{r}
-lit <- review(dag)
-edges <- lit$edgelist
-kablebox(edges)
-nodes <- lit$nodelist
-kablebox(nodes)
-
-# now with node and edge attributes 
-lit <- review(dag,
-              edge_attributes = c("mechanism", "cites", "cites_empirical", "cite_weight", "cite_weight_empirical") 
-              #,node_attributes = node_attributes
-              )
-
-edges <- lit$edgelist
-kablebox(edges)
-nodes <- lit$nodelist
-kablebox(nodes)
-```
-
-## igraph object
-
-```{r}
-# define node name
-nodes$name <- nodes$node
-
-g <- lit$graph
-g
-```
-
-What does it mean?
-
-- `D` means directed  
-- `N` means named graph  
-- `W` means weighted graph  
-- `name (v/c)` means _name_ is a node attribute and it's a character  
-- `cite_weight (e/n)` means _cite_weight_ is an edge attribute and it's numeric  
-
-## `igraph` statistics
-
-### 2.1 Practice accessing elements of the network
-
-Practice accessing the following elements of the network: nodes, names of the nodes, attributes of the nodes, edges, weights for each edge, all attributes of the edges, the adjacency matrix, and just the first row of the adjacency matrix.
-
-```{r}
-#V(g)  # nodes
-# V(g)$name %>% head() # names of each node
-vertex_attr(g) %>% as_tibble() %>% kablebox()# all attributes of the nodes
-E(g)  %>% head()# edges
-E(g)$cite_weight  %>% head()# weights for each edge
-edge_attr(g)  %>% as_tibble() %>%  kablebox()# all attributes of the edges
-# g[] %>% head # adjacency matrix
-g[1,] %>% head # first row of adjacency matrix
-```
-
-### 2.2 Network visualization with `igraph::plot()`
-
-How can we visualize this network? The `plot()` function works out of the box, but the default options are often not ideal:
-
-```{r}
-par(mar=c(0,0,0,0))
-plot(g)
-```
-
-Improve this figure. To see all the available plotting options, you can check `?igraph.plotting`. Set the vertex color, label colors, the size of the labels, curvature to the edge and edge color to ones different from the default settings and in a way that is visually appealing to you.
-
-```{r}
-par(mar=c(0,0,0,0))
-
-pdf(file="net.pdf")
-plot(g,
-     vertex.color = "grey", # change color of nodes
-     vertex.label.color = "black", # change color of labels
-     vertex.label.cex = .25, # change size of labels to 25% of original size
-     edge.curved=.25, # add a 25% curve to the edges
-     arrow.size = .2,
-     edge.color="grey20") # change edge color to grey
-dev.off()
-
-
-
-```
-
-### With `ggnetwork`
-
-```{r ggnetwork, fig.width=7, fig.height=7}
-# install.packages("ggnetwork")
-library(ggnetwork)
-n <- ggnetwork(g)
-
-library(magrittr)
-
-n$name %<>% str_replace(" ", "\n")
-
-n$name %<>% str_replace(" ([A-z]*)$", "\n\\1")
-
-
-library(magrittr)
- n$cite_weight %<>%  replace_na(0) 
- 
-n %<>% mutate(partisan = str_detect(name, "partisan"),
-              empirical = ifelse(!is.na(cites_empirical),
-                                 "Empirical work", 
-                                 "No empirical work"))
-
-n2 <- n %>% filter(partisan) %>% mutate(partisan = FALSE)
-
-n %<>% full_join(n2) %>% mutate(partisan = ifelse(partisan, "Mentions partisanship", "Other nodes"))
-
-set.seed(12)
-
-n$cite_weight %<>% as_factor()
-
-
-p <- ggplot(n) +
-  aes(x = x, y = y, xend = xend, yend = yend,
-      label = name %>% str_to_title()) +
-    geom_nodes(size = 10, alpha = .1) +
-    geom_edges(aes(color = cite_weight, linetype = empirical ),
-               curvature = 0.1, 
-               alpha = .8,
-               #box.padding = unit(1, "lines"),
-             arrow = arrow(length = unit(6, "pt"), type = "closed")) +
-  
-    geom_nodetext_repel(size = 2.3) +
-  theme_blank() + 
-  labs(color = "Number of\nPublications",
-       linetype = "") + 
-  scale_color_viridis_d(option = "plasma", begin = 0, end = .9, direction = -1) 
-
-p
-
-seedplot <- function(seed){
-  set.seed(seed)
-  p
-}
-
-seq <- seq(from = 1, to = 200, by= 50)
-
-#map(seq, seedplot)
-
-
-
-p <-  p + geom_edgetext(aes(label = cites_empirical %>% str_remove(",.*"), 
-                    color = cite_weight),
-                size = 2,
-                alpha = .2) 
-
-p
-```
-
-```{r ggnetwork-partisan, fig.width=14, fig.height=7}
-p + facet_wrap("partisan")
-```
-
-Now modify some of these plotting attributes so that they are function of network properties. For example, a common adjustment is to change the size of the nodes and node labels so that they match their `importance`. 
-
-Here, `strength` will correspond to the number of scenes they appear in. Let the size of the node be determined by the `strength`, and only show the labels of character that appear in 10 or more scenes. Finally change the colors of the node based on what side they're in (dark side or light side) and add an informative legend.
-
-```{r}
-V(g)$size <- strength(g)
-par(mar=c(0,0,0,0)); plot(g)
-
-# taking the log to improve it
-V(g)$size <- log(strength(g)) * 4 + 3
-par(mar=c(0,0,0,0)); plot(g)
-
-V(g)$label <- ifelse( strength(g)>=10, V(g)$name, NA )
-par(mar=c(0,0,0,0)); plot(g)
-
-# what does `ifelse` do?
-nodes$name=="minority rights"
-ifelse(nodes$name=="minority rights", "yes", "no")
-ifelse(grepl("rights", nodes$name), "yes", "no")
-
-#change the colors of each node based on what side they're in (dark side or light side).
-# create vectors with characters in each side
-dark_side <- c("minority rights")
-light_side <- c("")
-# node we'll create a new color variable as a node property
-V(g)$color <- NA
-V(g)$color[V(g)$type == "goal"] <- "red"
-V(g)$color[V(g)$type == "policy"] <- "gold"
-V(g)$color[V(g)$type == "effect"] <- "blue"
-V(g)$color[V(g)$type == "value"] <- "white"
-V(g)$color[V(g)$type == "condition"] <- "green"
-V(g)$color[V(g)$type == "metric"] <- "purple"
-
-V(g)$color[is.na(V(g)$type)] <- "grey20"
-vertex_attr(g) %>% as_tibble()%>% kablebox()
-par(mar=c(0,0,0,0)); plot(g)
-
-# what does %in% do?
-1 %in% c(1,2,3,4)
-1 %in% c(2,3,4)
-
-
-#add a legend.
-par(mar=c(0,0,0,0)); plot(g)
-legend(x=.75, y=.75, legend=c("no type provided in node attributes sheet"), 
-       pch=21, pt.bg=c("grey20"), pt.cex=2, bty="n")
+literature_plot(lit)
 ```
 
 
-Edge properties can also be modified. Set the width of each edge as a function of the log number of studies two concepts appear together. Plot it.
-
-```{r}
-E(g)$width <- log(E(g)$cite_weight) + 1
-edge_attr(g) %>% as_tibble() %>% kablebox()
-par(mar=c(0,0,0,0)); plot(g)
-```
 
 
-## Extra: layouts
-
-Up to now, each time we run the `plot` function, the nodes appear to be in a different location. Why? Because it's running a probabilistic function trying to locate them in the optimal way possible.
-
-However, we can also specify the __layout__ for the plot; that is, the (x,y) coordinates where each node will be placed. `igraph` has a few different layouts built-in, that will use different algorithms to find an `optimal` distribution of nodes. The following code illustrates some of these:
-
-```{r, fig.width=12, fig.height=7}
-par(mfrow=c(2, 3), mar=c(0,0,1,0))
-plot(g, layout=layout_randomly, main="Random")
-plot(g, layout=layout_in_circle, main="Circle")
-plot(g, layout=layout_as_star, main="Star")
-plot(g, layout=layout_as_tree, main="Tree")
-plot(g, layout=layout_on_grid, main="Grid")
-plot(g, layout=layout_with_fr, main="Force-directed")
-```
-
-Note that each of these is actually just a matrix of (x,y) locations for each node.
-
-```{r}
-l <- layout_randomly(g)
-str(l)
-```
-
-The most popular layouts are [force-directed ](https://en.wikipedia.org/wiki/Force-directed_graph_drawing). These algorithms, such as Fruchterman-Reingold, try to position the nodes so that the edges have similar length and there are as few crossing edges as possible. The idea is to generate "clean" layouts, where nodes that are closer to each other share more connections in common that those that are located further apart. Note that this is a non-deterministic algorithm: choosing a different seed will generate different layouts.
-
-```{r, fig.width=12, fig.height=7}
-par(mfrow=c(1,2))
-set.seed(777)
-fr <- layout_with_fr(g, niter=1000)
-par(mar=c(0,0,0,0)); plot(g, layout=fr)
-set.seed(666)
-fr <- layout_with_fr(g, niter=1000)
-par(mar=c(0,0,0,0)); plot(g, layout=fr)
-```
 
 
-## 3 Node properties
 
-Let's look at descriptive statistics at the node level. All of these are in some way measures of importance or __centrality__.
+
+---
+
+# Extra
+
+
+## Node properties
+
+Let's return to `igraph` functions to look at descriptive statistics at the node level. All of these are in some way measures of importance or __centrality__.
 
 The most basic measure is __degree__, the number of adjacent edges to each node. It is often considered a measure of direct influence. In the redistricting network, it will be the unique number of concepts that each concept is interacting with. Sort the `degree` of the network and print it out. 
 
@@ -557,7 +512,7 @@ neighbors(g, v=which(V(g)$name=="partisan advantage"))
 ego(g, order=2, nodes=which(V(g)$name=="partisan advantage"))
 ```
 
-## 4 Network properties
+## Network properties
 
 Let's now try to describe what a network looks like as a whole. We can start with measures of the __size__ of a network. `diameter` is the length of the longest path (in number of edges) between two nodes. We can use `get_diameter` to identify this path. `mean_distance` is the average number of edges between any two nodes in the network. We can find each of these paths between pairs of edges with `distances`. Find the diameter and mean distances of the network.
 
@@ -590,7 +545,7 @@ reciprocity(g)
 transitivity(g)
 ```
 
-## 5 Network communities
+## Network communities
 
 Networks often have different clusters or communities of nodes that are more densely connected to each other than to the rest of the network. Let's cover some of the different existing methods to identify these communities.
 
