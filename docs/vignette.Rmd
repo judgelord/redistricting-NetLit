@@ -315,6 +315,7 @@ ggraph(g, layout = 'fr') +
   geom_node_point(size = 10, 
                   alpha = .1) + 
   geom_edge_arc2(aes(#start_cap = label_rect(node1.name),
+    start_cap = circle(3, 'mm'),
     end_cap = circle(5, 'mm'),
     color = cite_weight %>% as_factor(),
     linetype = empirical),
@@ -336,10 +337,6 @@ ggraph(g, layout = 'fr') +
   #FIXME color scale
 scale_edge_color_viridis(discrete = TRUE,
                          option = "plasma", begin = 0, end = .9, direction = -1) 
-
-
-
-
 ```
 
 ---
