@@ -181,7 +181,8 @@ literature$from %<>% str_replace(" ", "\n") %>% str_replace(" ([A-z]*)$", "\n\\1
 
 literature$cite_weight %<>%  replace_na(0) # %>% as_factor()
 
-literature %<>% mutate(partisan = str_c(to, from) %>% str_detect("partisan"),
+literature %<>% mutate(partisan = str_c(to, from) %>% str_detect("Partisan"),
+                       comm = str_c(to, from) %>% str_detect("Commun"),
               empirical = ifelse(!is.na(cites_empirical),
                                  "Empirical work", 
                                  "No empirical work"))
@@ -221,13 +222,13 @@ What does it mean?
 
 The `plot()` function works out of the box, but the default options are often not ideal:
 
-```{r}
+```{r igraph}
 plot(g)
 ```
 
 For plotting options, you can check `?igraph.plotting`. For example, we can set the vertex color, label colors, the size of the labels, curvature to the edge and edge color.
 
-```{r igraph-plot, fig.width=10, fig.height=7}
+```{r igraph2, fig.width=10, fig.height=7}
 plot(g,
      vertex.color = "grey", # change color of nodes
      vertex.label.color = "black", # change color of labels
@@ -237,7 +238,7 @@ plot(g,
      edge.color="grey20") # change edge color to grey
 ```
 
-### With `ggnetwork`
+## With `ggnetwork`
 
 We can also plot using the package `ggnetwork` to tidy the `igraph` object so that we can use ggplot.
 
@@ -295,11 +296,52 @@ p + facet_wrap("partisan")
 ```
 
 
+### Betweenness
+
+```{r ggnetwork-centrality}
+# n
+p <- ggplot(n) +
+  aes(x = x, y = y, xend = xend, yend = yend,
+      label = name) +
+    geom_nodes(size = 10, alpha = .1) +
+    geom_edges(aes(linetype = empirical ),
+               curvature = 0.1, 
+               alpha = .8,
+               #box.padding = unit(1, "lines"),
+             arrow = arrow(length = unit(6, "pt"), type = "closed")) +
+  
+    geom_nodetext_repel(size = 2.3) +
+  theme_blank() + 
+  labs(linetype = "") + 
+  scale_color_viridis_c(option = "plasma", begin = 0, end = .9, direction = -1) + 
+  theme(legend.position="bottom")
+```
+
+
+```{r ggnetwork-edge-betweenness}
+p + aes(color = edge_betweenness) + labs(color = "Edge Betweenness")
+```
+
+
+```{r ggnetwork-node-betweenness}
+p + aes(color = betweenness) + labs(color = "Node Betweenness")
+```
+
+
+### Degree
+
+```{r ggnetwork-degree}
+p + aes(color = degree) + labs(color = "Degree")
+```
+
+
+
+
 
 ---
 
 
-### With `gggraph`
+## With `gggraph`
 
 We can also plot using the package `ggraph` package to plot the `igraph` object.
 
@@ -311,7 +353,7 @@ library(ggraph)
 
 set.seed(12)
 
-ggraph(g, layout = 'fr') + 
+p <- ggraph(g, layout = 'fr') + 
   geom_node_point(size = 10, 
                   alpha = .1) + 
   geom_edge_arc2(aes(#start_cap = label_rect(node1.name),
@@ -328,47 +370,112 @@ ggraph(g, layout = 'fr') +
   geom_node_text(aes(label = name), 
                  size = 2.3) + 
   theme_blank() + 
-  theme(legend.position="bottom",
-        legend.title = element_blank() # element_text("Publications")
-        ) + 
-  labs(color = "Number of\nPublications",
-       linetype = "") + 
+  theme(legend.position="bottom"        ) + 
+  labs(edge_color = "Number of\nPublications",
+       edge_linetype = "") + 
   #scale_edge_color_manual(values = "blues")
   #FIXME color scale
 scale_edge_color_viridis(discrete = TRUE,
                          option = "plasma", begin = 0, end = .9, direction = -1) 
+
+p 
 ```
 
 ---
 
-### Centrality
+#### Subgraphs
 
-```{r ggnetwork-centrality}
-p <- ggplot(n) +
-  aes(x = x, y = y, xend = xend, yend = yend,
-      label = name) +
-    geom_nodes(size = 10, alpha = .1) +
-    geom_edges(aes(color = cite_weight, linetype = empirical ),
-               curvature = 0.1, 
-               alpha = .8,
-               #box.padding = unit(1, "lines"),
-             arrow = arrow(length = unit(6, "pt"), type = "closed")) +
-  
-    geom_nodetext_repel(size = 2.3) +
-  theme_blank() + 
-  labs(color = "Number of\nPublications",
-       linetype = "") + 
-  scale_color_viridis_d(option = "plasma", begin = 0, end = .9, direction = -1) + 
-  theme(legend.position="bottom")
+```{r ggraph-subset, fig.width=20, fig.height=7}
+p + facet_wrap("comm")
 ```
 
 Now modify some of these plotting attributes so that they are function of network properties. For example, a common adjustment is to change the size of the nodes and node labels so that they match their importance. 
 
-Here, `centrality` 
-
 ### Betweenness
 
+```{r gggraph-edge-betweenness}
+ggraph(g, layout = 'fr') + 
+  geom_node_point(size = 10, 
+                  alpha = .1) + 
+  theme_blank() + 
+  theme(legend.position="bottom"
+        ) + 
+  scale_color_viridis_c(begin = .5, end = 1, direction = -1, option = "cividis") + 
+scale_edge_color_viridis(begin = 0.2, end = .9, direction = -1, option = "cividis")  +    
+  geom_edge_arc2(aes(
+    start_cap = circle(3, 'mm'),
+    end_cap = circle(5, 'mm'),
+    color = edge_betweenness,
+    linetype = empirical),
+    curvature = .1,
+    arrow = arrow(length = unit(2, 'mm'), 
+                  type = "closed")) + 
+    geom_edge_loop(aes(color = edge_betweenness))  +
+  geom_node_text(aes(label = name), 
+                 size = 2.3) + 
+  labs(edge_color = "Edge Betweenness",
+       color = "Node Betweenness",
+       edge_linetype = "") 
+```
 
+```{r gggraph-betweenness}
+ggraph(g, layout = 'fr') + 
+  geom_node_point(aes(color = betweenness),
+                  size = 10, 
+                  alpha = 1) + 
+  theme_blank() + 
+  theme(legend.position="bottom"        ) + 
+  scale_color_viridis_c(begin = .5, end = 1, direction = -1, option = "cividis") + 
+scale_edge_color_viridis(begin = 0.2, end = .9, direction = -1, option = "cividis")  +    
+  geom_edge_arc2(aes(
+    start_cap = circle(3, 'mm'),
+    end_cap = circle(5, 'mm'),
+    color = edge_betweenness,
+    linetype = empirical),
+    curvature = .1,
+    arrow = arrow(length = unit(2, 'mm'), 
+                  type = "closed")) + 
+    geom_edge_loop(aes(color = edge_betweenness
+                     )) +
+  labs(edge_color = "Edge Betweenness",
+       color = "Node Betweenness",
+       edge_linetype = "") + 
+  geom_node_text(aes(label = name), 
+                 size = 2.3) 
+```
+
+
+### Degree
+
+```{r gggraph-degree}
+ggraph(g, layout = 'fr') + 
+  geom_node_point(aes(color = degree),
+                  size = 10, 
+                  alpha = 1) + 
+  theme_blank() + 
+  theme(legend.position="bottom"        ) + 
+  scale_color_viridis_c(begin = .5, end = 1, direction = -1, option = "virdis") + 
+scale_edge_color_viridis(begin = 0.2, end = .9, direction = -1, option = "cividis")  +    
+  geom_edge_arc2(aes(
+    start_cap = circle(3, 'mm'),
+    end_cap = circle(5, 'mm'),
+    color = edge_betweenness,
+    linetype = empirical),
+    curvature = .1,
+    arrow = arrow(length = unit(2, 'mm'), 
+                  type = "closed")) + 
+    geom_edge_loop(aes(color = edge_betweenness
+                     )) +
+  labs(edge_color = "Edge Betweenness",
+       color = "Degree",
+       edge_linetype = "") + 
+  geom_node_text(aes(label = name), 
+                 size = 2.3) 
+```
+
+
+
+---
 
 
 
@@ -599,7 +706,7 @@ Networks often have different clusters or communities of nodes that are more den
 
 The most straightforward way to partition a network is into __connected components__. Each component is a group of nodes that are connected to each other, but _not_ to the rest of the nodes. For example, this network has two components.
 
-```{r}
+```{r igraph3}
 # components(g)
 par(mar=c(0,0,0,0)); plot(g)
 ```
@@ -672,7 +779,7 @@ for (k in 1:6){
 }
 ```
 
-```{r}
+```{r igraph-cluster-walktrap}
 wc <- cluster_walktrap(g)
 modularity(wc)
 membership(wc)

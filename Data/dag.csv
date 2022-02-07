@@ -24,9 +24,9 @@ NA,electorate composition change,decreases,incumbent vote share,Hood & McKee 201
 NA,electorate composition change,decreases,personal vote,"Carsey et al. 2017, Bertelli & Carson 2011",Carsey et al. 2017,"When a legislator's district changes, the personal connection with some of their constituents is lost. Thus, legislators are less able to convert supporters of the opposite party, as they have no connections with their new constituents.",1,1
 NA,House-Senate Delegation alignment,decreases,pork spending,Chen 2010,NA,NA,1,0
 NA,stability in voters' fellow constituents,increases heterogeneously by race,voter sense of place,Hayes & McKee 2011,Hayes & McKee 2011,NA,1,1
-NA,change in constituency boundaries,affects,voter information about their district,Winburn & Wagner 2010,NA,NA,NA,NA
+NA,change in constituency boundaries,affects,voter information about their district,Winburn & Wagner 2010,NA,NA,1,0
 NA,voter information about their district,decreases,rolloff,Winburn & Wagner 2010,Winburn & Wagner 2010,NA,1,1
-NA,voter information about their district,decreases,turnout,Winburn & Wagner 2010,Winburn & Wagner 2010,NA,1,1
+NA,voter information about their district,decreases,voter turnout,Winburn & Wagner 2010,Winburn & Wagner 2010,NA,1,1
 NA,voter information about their district,increases,split ticket voting,Winburn & Wagner 2010,Winburn & Wagner 2010,NA,1,1
 NA,electorate composition change,no effect,campaign resource allocation,Limbocker & You 2020,Limbocker & You 2020,"Candidates have their own campaign style, so their resource allocation decisions do not change even when the electoral circumstances change.",1,1
 NA,geographic partisan distribution,affects,partisan advantage,Chen & Rodden 2013; Duchin et al. 2019; Powell et al. 2020,Chen & Rodden 2013; Duchin et al. 2019; Powell et al. 2020,"Chen & Rodden 2013: Democrats are geographically clustered which is electorally disadvantageous; they run up the score in large cities which leads to a discrepency between total vote share and seat share. Duchin et al. 2019: Republicans in Massachusetts are evenly distributed across the state, so they can get 30-40% of the statewide vote, but never win a single House seat. Powell et al. 2020: Also find that geographic clustering plays a role in the discrepency between total vote share and seat distribution in the House.",3,3
@@ -52,8 +52,8 @@ NA,redistricting commission,"increases, no effect",competitiveness,"Carson et al
 NA,redistricting by courts,increases,competitiveness,Carson et al. 2014,Carson et al. 2014,NA,1,1
 NA,upcoming redistricting,increases,legislative majority-seeking behavior,Makse 2014,Makse 2014,"Parties have a greater incentive to become the majority party in the state legislature if redistricting is imminent and controlled by the legislature, as they can then determine the new district boundaries",1,1
 NA,partisan dislocation,NA,partisan dislocation,"Deford, Eubank & Rodden 2020",NA,"Deford, Eubank & Rodden 2020: new measure ""partisan dislocation"" which proxies for cracking/packing",1,0
-NA,compactness,NA,turnout,Ladewig 2018,Ladewig 2018,"Ladewig 2018 posits and tests that geographical compactness can affect electoral turnout, and tests this on two redistricting cycles. Posited mechanisms include functional ones (easier linkage between politicians and constituents), institutional (decreased investment in non-salient elections, which are brought about by weakened tied communities that are not compact) and normative (citizens who live in gerrymandered districts might be less invested in democratic process).",NA,NA
-NA,preserve communities of interest,NA,preserve communities of interest,Makse 2012,Makse 2012,Makse 2012 proposes using initiative data at polling station to get at latent patterns of voting in districts as a way to measure communities of interest.,NA,NA
+NA,compactness,NA,voter turnout,Ladewig 2018,Ladewig 2018,"Ladewig 2018 posits and tests that geographical compactness can affect electoral turnout, and tests this on two redistricting cycles. Posited mechanisms include functional ones (easier linkage between politicians and constituents), institutional (decreased investment in non-salient elections, which are brought about by weakened tied communities that are not compact) and normative (citizens who live in gerrymandered districts might be less invested in democratic process).",1,1
+NA,preserve communities of interest,NA,preserve communities of interest,Makse 2012,Makse 2012,Makse 2012 proposes using initiative data at polling station to get at latent patterns of voting in districts as a way to measure communities of interest.,1,1
 NA,partisan gerrymandering,increases,partisan advantage,Wang 2016; Cox & Holden 2011; Sabouni & Shelton 2021; Powell et al. 2020,Cox & Holden 2011; Sabouni & Shelton 2021; Powell et al. 2020,The party in charge of the redistricting process draws maps to secure an electoral advantage.,4,3
 NA,preserve communities of interest,decreases,partisan gerrymandering,Sabouni & Shelton 2021,Sabouni & Shelton 2021,"Some traditional districting principles, like preserving communities of interest, can constrain partisan gerrymandering. Authors measure this by examining the degree of overlap of districts before and after the 2010 wave of redistricting.",1,1
 NA,redistricting commission,increases,candidate quality,Williamson 2019,Williamson 2019,"Commission-based redistricting leads to more races with quality candidates (candidates who have held office previously), because quality candidates are more confident that they can win if the map has not been subject to partisan manipulation.",1,1
@@ -67,16 +67,4 @@ NA,change in constituency boundaries,affects,issue salience,Gardner 2012,NA,"Bec
 NA,change in constituency boundaries,affects,degree of political conflict,Gardner 2012,NA,"Districts can be drawn such that the electorate within each district is homogeneous or heterogeneous (along some relevant political dimension). The more heterogeneous the district, the greater likelihood of political conflict.",1,0
 NA,partisan gerrymandering,affects,majority representation,Goedert 2014; Nagle 2019,NA,"Goedert 2014: The type of gerrymander (bipartisan, nonpartisan, partisan) can affect two aspects of representation: bias and responsiveness. Nagle 2019: Gerrymandering in Pennsylvania hinders responsiveness, so responsiveness ought to be its own redistricting criteria.",2,0
 NA,detect gerrymandering,NA,inequality of opportunity vs outcome,Wang et al. 2018,NA,Wang et al. 2018: We can divide measures of gerrymandering into two categories: those that identify inequality of opportunity and those that identify inequality of outcome,1,0
-NA,change in constituency boundaries,increases,electorate composition change,Bertelli & Carson 2011; Hood & McKee 2013; Ansolabehere & Snyder 2012,NA,"Changing the boundaries of a district will necessarily cange who is in the district, but the reverse is not necessarily true. A electorate can change without the district boundaries changing.",3,0
-NA,NA,NA,NA,NA,NA,NA,0,0
-NA,NA,NA,NA,NA,NA,NA,0,0
-NA,NA,NA,NA,NA,NA,NA,0,0
-NA,NA,NA,NA,NA,NA,NA,0,0
-NA,NA,NA,NA,NA,NA,NA,0,0
-NA,NA,NA,NA,NA,NA,NA,0,0
-NA,NA,NA,NA,NA,NA,NA,0,0
-NA,NA,NA,NA,NA,NA,NA,0,0
-NA,NA,NA,NA,NA,NA,NA,0,0
-NA,NA,NA,NA,NA,NA,NA,0,0
-NA,NA,NA,NA,NA,NA,NA,0,0
-NA,NA,NA,NA,NA,NA,NA,0,0
+NA,change in constituency boundaries,increases,electorate composition change,Bertelli & Carson 2011; Hood & McKee 2013; Ansolabehere & Snyder 2012,Bertelli & Carson 2011; Hood & McKee 2013; Ansolabehere & Snyder 2012,"Changing the boundaries of a district will necessarily change who is in the district, but the reverse is not necessarily true. An electorate can change without the district boundaries changing. This relationship is not directly tested, but we assume it is true.",3,3
