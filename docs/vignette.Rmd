@@ -33,12 +33,12 @@ source(here::here("code", "update.R"))
 library(netlit)
 
 knitr::opts_chunk$set(echo = TRUE, 
-                      cache = FALSE, 
+                      cache = TRUE, #FIXME when updating data 
                       fig.width=8.5, 
                       split = T,
                       fig.align = 'center', 
                       fig.path='../figs/',
-                      fig.retina = 4,
+                      fig.retina = 8,
                       warning=FALSE, 
                       message=FALSE)
 
@@ -173,16 +173,48 @@ literature <- read_csv(here::here("data", "literature.csv"))
 literature %<>% 
   mutate(cites = cites %>% str_remove(",.*|;.*"))
 
-literature$to %<>% str_replace(" ", "\n") %>% str_replace(" ([A-z]*)$", "\n\\1") %>% str_to_title()
+literature$from %<>% str_replace_all("([a-z| |-]{8}) ", 
+                           "\\1\n") 
 
-literature$from %<>% str_replace(" ", "\n") %>% str_replace(" ([A-z]*)$", "\n\\1") %>% str_to_title()
+literature$to %<>% str_replace_all("([a-z| |-]{8}) ", 
+                           "\\1\n") 
 
-#literature %<>% drop_na(cite_weight)
+literature$from %<>% str_replace_all(" ([a-z| |-]{9})", 
+                           "\n\\1") %>% str_to_title()
 
-literature$cite_weight %<>%  replace_na(0) # %>% as_factor()
+literature$to %<>% str_replace_all(" ([a-z| |-]{9})", 
+                           "\n\\1") %>% str_to_title()
+
+literature$from %<>% str_replace("\nOf\n", "\nOf ")
+
+literature$to %<>% str_replace("\nOf\n", "\nOf ")
+
+literature$from %<>% str_replace("\nFellow ", " Fellow\n")
+
+literature$to %<>% str_replace("\nFellow ", " Fellow\n")
+
+literature$from %<>% str_replace("\nState\n", " State\n")
+
+literature$to %<>% str_replace("\nState\n", " State\n")
+
+literature$from %<>% str_replace("\nDistrict\n", " District\n")
+
+literature$to %<>% str_replace("\nDistrict\n", " District\n")
+
+literature$from %<>% str_replace("\nWith\n", " With\n")
+
+literature$to %<>% str_replace("\nWith\n", " With\n")
+
+
+literature$cite_weight %<>%  replace_na(0)
 
 literature %<>% mutate(partisan = str_c(to, from) %>% str_detect("Partisan"),
                        comm = str_c(to, from) %>% str_detect("Commun"),
+                       confound = case_when(
+                         from == "Preserve\nCommunities\nOf Interest" & to == "Rolloff" ~ T,
+                         from == "Voter\nInformation\nAbout Their\nDistrict" & to == "Rolloff" ~ T,
+                         from == "Preserve\nCommunities\nOf Interest" & to == "Voter\nInformation\nAbout Their\nDistrict" ~ T,
+                       T ~ F),
               empirical = ifelse(!is.na(cites_empirical),
                                  "Empirical work", 
                                  "No empirical work"))
@@ -198,13 +230,14 @@ kablebox(edges)
 
 nodes <- lit$nodelist
 kablebox(nodes)
+
+# define igraph object as g
+g <- lit$graph
 ```
 
 ### The `igraph` object
 
 ```{r}
-# define igraph object as g
-g <- lit$graph
 g
 ```
 
@@ -347,54 +380,68 @@ We can also plot using the package `ggraph` package to plot the `igraph` object.
 
 This package allows us to plot self-ties, but it is more difficult to use ggplot features (e.g. colors and legend labels).
 
-```{r ggraph, fig.width=10, fig.height=7}
+```{r ggraph, fig.width=10, fig.height=7, cache= FALSE}
 # install.packages("ggraph")
+library(tidyverse)
+library(ggnetwork)
 library(ggraph)
 
-set.seed(12)
+# best seed 1,4, *5*
+set.seed(5)
 
 p <- ggraph(g, layout = 'fr') + 
   geom_node_point(
     aes(color = degree %>% as.factor() ),
-    size = 10, 
-    alpha = 1
+    size = 6, 
+    alpha = .7
     ) + 
   geom_edge_arc2(
     aes(
       start_cap = circle(3, 'mm'),
-      end_cap = circle(5, 'mm'),
+      end_cap = circle(6, 'mm'),
       color = cite_weight %>% as_factor(),
       linetype = empirical
       ),
-    curvature = .1,
+    curvature = 0,
     arrow = arrow(length = unit(2, 'mm'), 
-                  type = "closed")
+                  #angle = 45,
+                  type = "open")
     ) +
   geom_edge_loop(
-      aes( color = cite_weight %>% as_factor() )
+      aes( color = cite_weight %>% as_factor(),
+      start_cap = circle(5, 'mm'),
+      end_cap = circle(2, 'mm'),
+      linetype = empirical
+      ),
+      n = 300,
+      strength = .6,
+    arrow = arrow(length = unit(2, 'mm'), 
+                  #angle = 45, 
+                  type = "open")
     ) +
-  geom_node_text(
-    aes(label = name), 
-    size = 2.3
-    ) + 
+  geom_node_text( aes(label = name), size = 2.3) + 
   theme_blank() + 
   theme(legend.position="bottom") + 
   labs(edge_color = "Number of\nPublications",
-       color = "Degree Centrality",
+       color = "Degree\nCentrality",
        edge_linetype = "") + 
 scale_edge_color_viridis(discrete = TRUE,
                          option = "plasma", begin = 0, end = .9, direction = -1) +
-  scale_color_grey(start = .9, end = .4) 
+  scale_color_brewer()
+  #scale_color_grey(start = .95, end = .5) 
 
 p 
+
 ```
 
 ---
 
 #### Subgraphs
 
-```{r ggraph-subset, fig.width=20, fig.height=7}
+```{r ggraph-subset, fig.width=20, fig.height=7, cache=FALSE}
 p + facet_wrap("comm")
+
+p + facet_wrap("confound")
 ```
 
 Now modify some of these plotting attributes so that they are function of network properties. For example, a common adjustment is to change the size of the nodes and node labels so that they match their importance. 
