@@ -1,0 +1,329 @@
+\documentclass{cup-pan}
+\usepackage[utf8]{inputenc}
+\usepackage{blindtext}
+
+\usepackage{comment}
+
+\title{Mapping literatures with networks: an application to redistricting}
+
+\author[1]{Adeline Lo}
+\author[2]{Devin Judge-Lord}
+\author[1]{Kyler Hudson}
+\author[1]{Kenneth R. Mayer}
+
+\affil[1]{Department of Political Science, University of Wisconsin-Madison, 1050 Bascom Mall, Madison, WI 53706. Email: \url{aylo@wisc.edu}}
+\affil[2]{Department of Government, Harvard University, 1737 Cambridge St, Cambridge, MA 02138.}
+%% Corresponding author
+\corrauthor{Adeline Lo}
+
+%% Abbreviated author list for the running footer
+\runningauthor{Lo, Judge-Lord, Hudson \& Mayer }
+
+\addbibresource{refs.bib}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Conducting literature reviews is bread-and-butter to scientific research across disciplines; systematic ones that take a landscape view of bodies of work can be more costly for junior researchers or scholars interested in exploring new substantive territory, however. Motivated by a need for objective, informative and systematic assessments of literature that are accessible to junior and senior scholars alike, we propose a network-based framework for conducting literature reviews. A literature is composed of a network of recurring concepts (nodes) and theorized relationships among them (edges). The approach offers \textit{objectivity} in terms of rules to what constitutes the types of work that are the "universe" of scholarly work and main theoretical constructs of interest. 
+% DEVIN: the inclusion criteria are subjective, and systematic inclusion criteria are not uncommon. Our innovation is more about the *objective* attributes of the selected sample. 
+The network visualization of the literature landscape allows the researcher to answer commonly posed questions -- such as major themes in current work and gaps in the literature -- thus providing rich \textit{information}. And, it is low-cost and \textit{systematic} in the sense that the building block behind the exercise rests on careful readings of single research pieces and inputting each into a spreadsheet -- a task accessible to new and experienced researchers in the substantive topic alike. We offer a user-friendly and open-source \texttt{R} package \texttt{NetLit} for researchers to apply the network approach and demonstrate our approach on the recent decade of redistricting literature.
+%Only two levels of sectional headings, \verb|\section| and \verb|\subsection|, should be used. 
+
+\keywords{networks, redistricting.}
+\end{abstract}
+
+%%% MAX 3000 WORDS for LETTERS
+
+\section*{Intro and Motivation}
+
+The first step in any scientific research is comprehensively understanding the relevant literature. "Literature reviews" can range from an exposition of past work in the first chapter of a dissertation, critical analysis, distinguishing between theoretical and empirical work, classifying different modes of empirical work, to identifying intellectual communities or schools, to systematically evaluating past work as part of replication or meta-analysis. In nearly all cases, the goal is the same: identifying what is known and not yet known and suggesting new paths for productive research \citep{knopf_doing_2006}. 
+
+As obvious and important as this step is, there is surprisingly little explicit guidance on how to write a literature review in political science \citep{knopf_doing_2006}. What constitutes an accurate summary of prior research? How complete is that knowledge? Should theoretical work be placed next to empirical work? How do we assess impact or credibility?
+
+One key question is what should be included in the review.   One approach is relying on expert knowledge of and familiarity with a subject to suggest a body of relevant literature \citep{mcghee_partisan_2020}. The reviewer sifts through a body of work, identifies and selects pieces suitable for assessment, organizes them using a schema (perhaps conceptual, theoretical, empirical, or chronological), distinguishes what we know from what is unknown or disputed, and ends with ideas for future lines of inquiry.
+
+More commonly, though, literature collection and organization is less systematic, often based on ad hoc collection methods that are not clearly explained, and applying subjective assessments of what is persuasive, important, or foundational. Such methods can result in a review that does not reflect the full scope of the literature, depends on what an author is already familiar with, or reflects biased metrics based that can exclude work written by women or minorities \citep{dion_gendered_2018}. In addition, assessing patterns in the literature without guiding principles or organizational schemata may obscure how different research directions have interacted and/or overlapped; such patterns may be difficult to observe without visualization aids. And while these drawbacks are known to exist and highlighted \citep[indeed, guidelines for a quality literature review often include a call for transparency in inclusion criteria, such as in ][]{snyder_literature_2019}, the vast majority of literature reviews are still conducted in an unsystematic way.
+
+%\section{Method benefits and application usages}
+Motivated by a need for a transparent yet informative approach to understanding bodies of literature, we propose a network-based framework for conducting literature reviews. A literature is a network of recurring concepts (nodes) and theorized relationships among them (edges). Understanding a literature as a network offers several benefits. First, it offers increased objectivity regarding the types of work included in the "universe" of relevant prior knowledge --- that is, the population, sampling approach, and sample are clarified as part of the process of defining a network. Second, specifying a network of concepts clarifies the main theoretical constructs of interest, that is, the nodes in the network. Such an approach may also help researchers answer questions that naturally emerge in most research applications.\footnote{We distinguish this method from systematic reviews that are conducted in the context of meta-analyses, which often have the express and more narrow purpose of combining empirical results from a spread of studies to determine the size and robustness of a specific finding.} \par 
+%TODO: I DON'T UNDERSTAND THE LAST POINT ABOVE
+
+Table \ref{tab:relit} presents a list of commonly considered questions when conducting literature reviews. We group these into questions that \textit{assess and identify} the literature landscape, \textit{explore} possibilities to add to the literature, and \textit{isolate and control} conceptual relationships for further inspection and theorizing. This first set of questions include summarizations of prior research and present a sense of how complete the literature knowledge is -- identified as two key elements of a literature review in \citet{knopf_doing_2006}. Such substantive questions have natural counterparts in a network sense; a "global summary" of the current research on a topic asks what the full network looks like -- answerable through mapping and visualizing the literature into physical network space. Further identifying key concepts that the literature has revolved around similarly translates easily to finding \textit{central nodes} in such a network, where centrality might be measured locally (concepts that are relatively well studied within a cluster of work, measured through statistics such as local degree centrality) -- or globally (prominent concepts in the network, measured through global vertex centrality). Finally, determining whether there have been "communities" of scholars and works who have carried on research conversations with one another, ports easily into the idea of finding "network communities", which itself has an rich and active literature, using community detection algorithms \citep[see for a review][]{yang_comparative_2016}.\par 
+
+Another common reason for conducting literature reviews is prompted from finding "gaps in the literature", or areas that remain open to theoretical exploration and theories might be under-empirically validated at present (see rows 3-4 in Table \ref{tab:relit}). We posit that \textit{exploration} questions like these can be more difficult to answer without systematic accumulation and organization of the literature, as they inherently focus on isolating "missing" aspects of the literature. Within a network framework, finding such missingness is comparatively more straightforward and calculable. For instance, exploring whether two currently disparate communities of work can be connected with a theoretically grounded tie can start from a sweep of exploring unconnected components of the literature network graph. Similarly, if several works have established the ways in which concept A affects concept B, while others have noted the ways in which B has influenced C --- each represented as edges between the three nodes --- but no explorations of the direct and mediated effects of A on C are present in the literature (no edge exists between A and C), this too may suggest points of inquiry. And, a direct and exact comparison of the literature network and works that have empirically tested such connections entails simply inspecting the two networks for missing edges.\par 
+
+Finally, we suggest that taking a network approach to mapping literature reviews can lead to conceptual gains for social scientists interested in pursuing questions of causal significance. When trying to understand the causal pathways that are related to a theoretical concept of interest, or to assess confounding concepts to a hypothesized causal relationship (or when considering causally interpreting multiple associations in a regression model \citep{keele_causal_2020}, researchers can lean on the existing body of work by simply considering the local \textit{neighborhood} of a given concept (node); indeed for the latter question, work that draws causal linkages from a third concept to both independent and dependent concepts are natural candidates for possible confounding variables.\footnote{We note of course that network takeaways are as good and complete as the data that compose the network as well, and as is true in all similar substantively oriented research, expert knowledge can only help guide better a) questions, b) assessments of the interest-value in identified "gaps" and c) theory generation.}\par
+
+In the section to follow we walk through an example application to a review of the last decade's literature on redistricting; our open-source \texttt{R} package \texttt{NetLit} takes a spreadsheet of observations from a literature review and uses \texttt{igraph} to calculate key network statistics.
+
+
+%Local centrality is concerned with the relative prominence of a focal point in its neighbourhood, while global centrality concerns prominence within the whole network.
+
+\begin{comment}
+
+\begin{enumerate}
+    \item Helps us answer questions that we naturally have about these types of data, (and helps us answer questions that are \emph{difficult} to answer with these types of data) e.g.:
+    \begin{itemize}
+        \item Summarization of prior research and present a sense of how complete that knowledge is -- demarcated as the two key elements of a literature review in \citet{knopf_doing_2006}. $\rightarrow$ seeing global summaries and the full extent of a body of works as a whole can be aided through mapping the literature into physical network space.
+        \item Key concepts $\rightarrow$ centrality
+        \item Key communities of work $\rightarrow$ components
+        \item Works that serve as communicators between communities of work that are not engaging with each other as much otherwise $\rightarrow$ hubs (?) \emph{hard to do without network approach}
+        \item Under theorized conceptual relationships $\rightarrow$ unclosed or open triads and near-cliques. \emph{hard to do without network approach} "gap" in the literature: questions or perspectives that have not been undertaken
+        \item Areas of consensus or near-consensus -- ``conventional wisdom'' \citep[][]{knopf_doing_2006}.
+        \item Areas of disagreement or debate -- differential "schools of thought" 
+        \item Under empirically validated conceptual relationships $\rightarrow$ edge differences between theoretical network and empirically validated network. "gap" in the literature: under or un-empirically validated conceptual relationships.
+        \item What might be implications or downstream effects of our study findings? (follow arrows downstream from DV node)
+        \item What are important confounding variables we should consider? (isolate network related to IV and DV and use as starter causal DAG)
+    \end{itemize}
+    \item \emph{Easy} -- Workload/expertise level allows low barrier to entry: researchers only need focus on substantiating reasonable rules/parameters and input of single-pieces of research in this process (of which training within usual graduate programs generally cover) since these are the building blocks to the approach; while developed expertise and substantive knowledge always help, more junior researchers can still take this approach based on common skills.
+    \item Second-order reasons why network approach can work given the above:
+    \begin{itemize}
+        \item We're in a Goldilocks situation for most literature review coverage as these are often in the ranges of 100 or so reference pieces which constitutes a medium sized network. Some patterns are too hard to discern by eye/hand (network bigger than a handful of nodes) yet exact statistics and patterns of interest can be calculated (no approximations needed as we might for large networks).
+    \end{itemize}
+    \item The above can be easily implemented in our open source \texttt{R} package \texttt{NetLit}.
+\end{enumerate}
+
+\end{comment}
+
+\section*{An application to the redistricting literature}
+To illustrate our approach, we consider an application to the redistricting literature over the past decade. We focus on the last decade of research on this topic as a way to demarcate a "latest research" timeline (see \citet{dion_gendered_2018} for a similar approach), though the interested researcher might choose any time span.
+%motivate
+Political redistricting has been a popular topic of academic research in recent years, as courts, politicians, and the public pay more attention to the line-drawing process. Redistricting provides an excellent opportunity to demonstrate our literature review method because scholars have approached the topic in myriad ways. 
+
+A scholar surveying the gerrymandering and redistricting literature over the past decade would probably begin with work proposing metrics for detecting partisan gerrymanders, part of a broader effort to identify a manageable standard that federal courts could use to limit extremely biased redistricting plans (and which Justice Anthony Kennedy appeared to ask for in LULAC v. Perry 584 U.S.399 (2004)). Alternatives included the efficiency gap, which captures how efficiently votes are aggregated into seats (Stephanopoulos and McGhee 2015); the "mean-median," which compares a party's mean vote share across all districts with its median vote share (McDonald and Best 2015); and declination, which measures the spatial distribution of vote percentages just above and below the 50% district-level vote share (Warrington 2018; Campsi et al. 2019). The measures prompted a vigorous debate over their respective properties merits, drawbacks, and common underlying relationships to partisan symmetry (Best et al., 2018; Cho 2017; Ellenberg 2021; Grofman 2018; Krasno et al., McGhee 2017; McGhee 2018; Nagle 2015; Stephanopoulos and McGhee 2018; Veomett 2019). Although the U.S. Supreme Court's decision to declare gerrymandering a political question beyond the reach of the federal courts, In January 2022, the North Carolina Supreme Court recognized "mean-median difference analysis; efficiency gap analysis, close-votes, close _seats analysis, and partisan symmetry analysis" as methods for evaluating the degree of partisanship in a plan (Harper v. Hall).
+
+A second major development was automated redistricting methods, which took advantage of increases in computing power and new computational approaches to draw large numbers of plans with different decisions rules and initial conditions (Liu, Cho and Wang 2016; Cho and Liu 2018; Chen and Rodden 2013; Magelby and Mosesson 2018; Vanneschi, Henriques and Castelli 2017). A well-known problem is that the number of possible redistricting plans in anything other than the tiniest geography is so astronomically large that the characteristics of the full set of plans is unknowable. Several methods of approximating the distribution have been proposed, using Markov Chain Monte Carlo methods to sample from the unknown full distribution (Fifield 2019; McCartan and Imai 2020; Chikina, Frieze and Pegden 2017). Closely related to automated methods was the comparison of enacted maps to a large set of automated map, both as a method to identify outliers that indicated extreme partisan gerrymanders and to determine how a state's political geography could result in a "natural" gerrymander even under neutral rules (Cho and Lieu 2016; Chen and Cottrell 2016; Chen and Rodden 2013; Chen and Rodden 2015; Chen 2017; Cain et al. 2018; Ramacharandan and Gold 2018; Fifield et al. 2020).
+Third, the literature continued to explore the effects of gerrymandering – and especially extreme plans – on electoral and political outcomes: incumbency advantage (Henderson, Hamel and Goldzimer 2018); electoral competition (Cottrell 2019); candidate quality and emergence (Williamson 2019); roll call voting and state policy (Caughey, Tausanovitch and Warshaw 2017); political parties (Stephanopoulos and Warshaw 2020); and campaign contributions (Crespin and Edwards 2016); constituent access (Niven, Cover, and Solimine 2020).
+
+Of course, the weight a particular review places on different aspects of the literature depends on what questions a researcher asks. What this effort would not show – at least not without substantial additional work – is how the normative, theoretical, and empirical claims connect to each other, or whether the survey has comprehensively captured the scope of past work. comprehensiveness
+  
+%Explain "input" process and example rules we've used for our redistricting example. Note what other scholars might use as alternative rules. Summarize a total number of nodes, edges, and average degree.
+Our selection criteria for the corpus of literature is based on a set of predefined rules, such that criteria discussions can be towards the rules themselves rather than individual instances of inclusion or exclusion. For this illustration, we prioritize \textit{recent} and \textit{impactful} work on redistricting as indicated by journal rankings and paper citations. We first identified top political science journals based on Scimago journal rankings \citep{scimago_rank_2020}. We select six journals broad enough in scope to cover the topic of redistricting (AJPS, APSR, PA, BJPS, PoP, QJPS). We also include the next two journals related to American Politics (\textit{Electoral Studies} and \textit{State Politics and Policy Quarterly}). We further include the \textit{Election Law Journal}, which has  systematically published court and government-cited articles about redistricting. We then search these eight journals for articles published since 2010 that contain four key phrases (efficiency gap, partisan symmetry, gerrymander, redistrict) in either the title or abstract. Every article that met these criteria is included in the network.\par 
+Because we do not want to miss influential articles that were not published in the highest-ranked journals, we also employed a second method of identifying relevant articles. We searched for our four key phrases on Google Scholar and included any relevant article published after 2010 that included a key phrase in the title or abstract and had fifty or more citations. 
+%Journal rules: (Also searching 2010 and onwards, with following terms in the title/abstract: efficiency gap ,partisan symmetry, gerrymander, redistrict )
+%Google scholar: 2010 and onwards for published articles (related definitively to political science/redistricting) with the following terms in the title/abstract: efficiency gap ,partisan symmetry, gerrymander, redistrict and which have been cited 50 times or more. (edited)
+After collecting the 115 articles that fit our criteria, we identified relationships among key concepts discussed in each article. We conceptualize these relationships as edges between nodes (concepts). Because relationships among concepts are often directional, we record each concept as a "from" node related to one or more other concepts ("to" nodes). For example, if an article posits that electoral competitiveness increases voter turnout, "competitiveness" is the from node and "turnout" is the to node. We record information about this theorized causal relationship (the "edge" between competitiveness and turnout), such as the number of articles that discuss or empirically assess this relationship and the direction of the hypothesised or empirical effects. (We refer to information about theorized relationships as "edge attributes"). Our final data set contains 57 concept nodes and 69 edges describing relationships among these concepts.\par 
+
+
+\begin{figure}[bt]
+\centering
+\includegraphics[width=0.99\textwidth]{Figures/ggraph-1.png}
+\caption{Redistricting literature network. Each node represents a theoretical concept with labels in black; arrows connect concepts explicitly theorized as directional relationships in published works, colored by number of works. Solid edges indicate empirically studied connections. Dashed edges indicate relationships that have been theorized by not studied in the empirical literature reviewed. As shown in the $netlit$ vignette, network graphs like this are easily produced by using $graph$ object returned by the $netlit::review()$ function as the input to network graphing functions from packages like $gggraph$ or $ggnetwork$. We also show how the $nodelist$ and $edgelist$ objects serve as the required inputs for other network visualization packages, such as $visNetwork$.}
+\label{fig:fullnetwork}
+\end{figure}
+
+\begin{figure}[bt]
+\centering
+\includegraphics[width=0.99\textwidth]{Figures/ggraph-subset.png}
+\caption{Redistricting literature related to the concept of preserving communities of interest. Each node represents a theoretical concept with a theorized relationship to preserving communities of interest; arrows connect concepts that have been explicitly theorized as directional relationships in published works, colored by number of works. Solid edges indicate empirically studied connections. Dashed edges indicate relationships that have been theorized by not studied in the empirical literature reviewed.}
+\label{fig:subset}
+\end{figure}
+
+
+
+\begin{table}[hbtp]
+\centering
+\includegraphics[width=0.99\linewidth]{Figures/RedistrictLit_table.pdf}
+\caption{Literature review questions as network questions.}
+\label{tab:relit}
+\end{table}
+
+
+
+
+
+%Walk through each example questions$\rightarrow$ network statistic or descriptive; summarize. (see below enumerated list).
+%What does the network look like?
+\ref{fig:fullnetwork} shows our resulting redistricting literature network. Fifty-seven nodes represent theoretical concepts, and sixty-nine arrows show directional relationships explicitly theorized in our corpus, colored by the number of publications addressing that relationship. Work that discusses measurement and/or the theoretical importance of a specific concept are represented as \textit{self-ties}; for instance, ``Compactness'' (left-hand side of Figure \ref{fig:fullnetwork}) has been regularly studied as a concept of interest, whose measurement has inspired a series of works \citep{barnes_gerrymandering_2021, magleby_new_2018, deassis_redistricting_2014, chen_cutting_2015, tam_toward_2016, saxon_reviving_2020}. \\
+
+How might a network approach differ with the more mainstream approach of expert-guided review of the literature? While our coverage is of "recent" work, thus representing where scholars have begun to focus attention toward in pushing the literature forward (instead of  emphasizing settled debates for instance), rather than a grand overview of all research on redistricting, some comparisons can still be made of broad patterns that can be picked up. One such broad and recent overview of redistricting is \citet{mcghee_partisan_2020} review, which appeared in the \emph{Annual Review of Political Science}, describing the extant work on gerrymandering. McGhee reviews the literature beginning in the 1960s, a longer time span than our example here, though he also states that the topic of gerrymandering did not receive much attention until after the 2010 wave of redistricting. Importantly, our proposed network approach is not limited in this way, but rather can easily extend in time horizon, by simply allowing the inclusion criteria to include a longer time span. In addition, because he does not have explicit criteria for identifying relevant articles, McGhee includes a couple of articles with few citations that do not meet our threshold \citep[such as in ][]{warrington_quantifying_2018}. McGhee also discusses the effect that political science research itself has had on real world politics, such as court cases. Because we focus only on published articles, our approach alone does not provide for such discussion. Yet, again, this difference can be ameliorated easily through defining similar inclusion criteria, and is not a limitation in the approach.\par 
+
+%Partisan Dislocation --> declination (slope of the line up to the median and after)
+
+%Equal population: discussed as measure -- legal rule -- but not hypothesized in a theory in the last 10 years (but not "foreign" concept). No leverage in trying to explore if it's the 'right rule' -- 
+
+Both our network approach and McGhee's traditional review identify the many different ways of measuring gerrymandering. McGhee places each metric into its own subsection, while our node attributes allow us to quickly identify different metrics simply by examining the graph. Any measurement literature is shown by self-tie. In addition, we can see what concepts the metrics are related to. Another commonality between our approaches is the identification of future areas of research. McGhee does this by reframing the concept as partisan advantage rather than gerrymandering and then thinking about its downstream effects. We do this by examining different features of the network, such as hubs, linked communities, open triads, and causal chains. This highlights one of the primary advantages of our approach. Unlike traditional literature reviews, our network can show how different bodies of research interact, sometimes mediated by a third concept. McGhee's piece struggles with this; he creates distinct categories and places each article within them, so, as a reader, it is difficult to understand how articles within different categories interact. 
+
+%#2 central nodes
+As posed in Table \ref{tab:relit}, under "Assess \& Identify", a researcher might be interested in the \textit{key concepts} around which the literature has circulated. A natural translation of this question to a network setting is "what are central nodes?". Statistics abound for centrality, and we distinguish between local degree centrality -- such that concepts locally are referred to in the literature often compared to neighborhood concepts -- and global vertex centrality, wherein concepts are prominent across the literature network. In the example shown in Figure \ref{fig:subset}, we focus on the concept of "preserving communities of interest", which we define here as an umbrella covering broad goals of preservation of minority areas, municipal boundaries, political subdivision boundaries, and core district retention. It is unsurprising that this predominantly legal concept scores high in degree (=5) as it is both a core redistricting goal and widely discussed in a variety of ways. The arrows pointing from this node to others show that the literature we reviewed often discussed it as a cause. Dashed lines show that many of the causal relationships posited were not empirically tested. \par 
+
+%#3 communities
+Another question that might come up is whether there are communities of work that have developed in the redistricting literature recently. Again, we see a natural translation of this question to one posed in network terms: "what are communities in the network?"; and likewise, an array of network tools allow for network community discovery. A range of community detection algorithms have developed, and we utilize here a particularly popular and simple approach that detects densely connected subgraphs via random walks. The idea here is that communities are defined by member concepts that are more likely to discuss one another (inwardly oriented edges) than discuss outside concepts (outwardly oriented edges). For instance, a distinct community (Figure \ref{fig:subset}) surrounding how composition change in the electorate ("Change in Constituency Boundaries") can affect downstream campaign resource allocations and vote power has arisen in recent years, highlighting effects that redrawing of maps might change political environments for political candidates at the individual level.\par 
+%TODO EITHER CHANGE THE REFERENCE OF DISCUSSION ABOVE BECAUSE THEY DO NOT MATCH 
+
+%#4 theoretical exploration,#5 under empirically validated
+Beyond assessing the current state of the literature, a defining task in research is finding areas of interest for theoretical exploration and where theoretical connections have yet to be empirically validated; that is, where are the "gaps" in the literature? A visual guide to beginning to answer the first question might simply be finding areas in the literature network where two concepts have been abundantly discussed, separately, but not directly with one another, and where the researcher might posit such a connection could feasible exist; for instance, a burgeoning series of works such as \cite{carsey_rethinking_2017, limbocker_campaign_2020, hood_unwelcome_2013, ansolabehere_effects_2012} have leveraged redrawn lines creating electorate composition changes that are plausibly exogenous to vote-related outcomes of interest, but less attention has been paid to how such composition changes affect minority representation. Answering the second question is a simple matter of incorporating an edge characteristic in the network --- whether concepts have been linked through empirical studies; Figure \ref{fig:fullnetwork} draws edges such that dashed lines indicate a theorized but not empirically validated linkage, while solid lines represent connections between concepts through both. For instance, \textit{Partisan Advantage} is hypothesized to affect whether \textit{Floor votes Align with District/State Preferences} (see bottom portion of Figure \ref{fig:fullnetwork}) -- both through \citep{caughey_incremental_2017} -- connections that remains untested empirically in the recent decade. Likewise, the upper right corner of the literature network suggests two concepts that have been the subject of discussion as important measures to consider calculating (visually verified with self-ties). Measuring \textit{Equal population} has been discussed more often than \textit{Partisan dislocation} \citep{gatesman_lattice_2021, magleby_new_2018}, which is reasonable given that it is generally accepted at this point as a legal rule related to redistricting; whereas the latter concept is a new one introduced by \cite{deford_partisan_2021}. 
+
+%\textit{compactness} is hypothesized by \citet{webster_reflections_2013} to hinder a map drawer's ability to create districts for historically underrepresented groups (\textit{minority representation}), a theory that remains untested empirically to date.
+
+%Webster 2013: citing earlier research, Webster posits that compactness hinders a map drawer's ability to create districts for historically underrepresented groups.
+
+
+%%#6 causal pathways #7 confounders
+Should researchers begin the process of considering the causal stories that relate to an outcome of interest, two helpful exercises based on a goal of \textit{isolating and controlling} for related concepts are feasible with a network approach; in asking the question "what are causal pathways related to a theorized concept?", the researcher can focus on the neighborhood of nodes and associated edges to the studied concept; this is easily accomplished through a visual inspection such as the neighborhood surrounding the "Preserve communities of interest" node (center-left of Figure \ref{fig:fullnetwork}). Indeed, by exploring the neighborhood around this node, we can see that downstream hypothesized effects of preserving community interests include changes at the voter level (voters' environments by affecting the available information of their district \textit{Voter Information About Their District}, as well as their peers themselves \textit{Stability In Voters' Fellow Constituents}) as well as the legislator level (e.g. \textit{Partisan Gerrymandering} and \textit{Rolloff}). And, should the researcher's interest relate to how \textit{Voter Information About Their District} contributes to \textit{Rolloff}, a cursory glance on the neighborhood network of concepts and edges would immediately suggest that a prominent confounding concept would be \textit{Preserving Communities of Interest}.
+
+
+
+
+\section*{Discussion and conclusion}
+
+We present an organizing framework based on network representations to conduct a literature review. While our example here focused on the topic of redistricting, organizing and summarizing literatures via this network approach need not be limited in topic or discipline;, for topics that are highly reliant on building off of potentially complex combinations of prior work, this approach might prove especially fruitful -- e.g., biological pathways literatures, where the nature of clinical and lab work might constrain focus on specific components of a pathway but necessitate understanding surrounding factors, or, interdisciplinary work that touches on different subtopics, perspectives and approaches.
+
+We highlight several helpful features of utilizing networks to map literatures; beyond assessing and identifying what are prominent themes and communities of work, the network representation of literature lends itself to ease in exploring areas for theoretical exploration as well as areas that are as yet under-empirically validated. Finally, scholars interested in identifying causal relationships can leverage the natural directed graph representations in this framework to both inspect causal pathways related to a theorized concept and discussed in the literature as well as assemble confounding concepts to a hypothesized causal relationship (perhaps most obviously helpful in causal interpretations of estimated associations in regression models, such as discussed in \citet{keele_causal_2020}).
+
+We posit that this approach may also offer lower barriers to entry: while substantive expertise on the topic at hand always improves exercises like these, the units of input in creating network representations of literatures require summarizing concepts and identifying posited relationships between them within single research works, repeating this over the list of works, and inputting this information into a spreadsheet; all of which are more accessible to newcomers to a literature and/or junior scholars. We do not illustrate this in our short letter here, but another natural usage of the tool is in reviewing how the literature has evolved over time --- by subsetting the input data to prior periods and comparing the generated literature network to the most complete and up-to-date network.
+
+As we have caveated throughout, our network-based framework still relies on researcher choices throughout -- such as the universe of sources and time periods -- though we submit that these choices are often made in traditional literature reviews, and that within our approach these choices are more easily presented for goals of transparency and replicability.
+\\
+
+
+
+%%Publication table
+
+\begin{tabular}{l|r}
+\hline
+{\bf Publication} & {\bf Articles}\\
+\hline
+AJPS & 2\\
+\hline
+American Economic Review & 1\\
+\hline
+APSR & 3\\
+\hline
+Computers \& Operations Research & 1\\
+\hline
+Duke Journal of Constitutional Law and Public Policy & 1\\
+\hline
+Election Law Journal & 25\\
+\hline
+Electoral Studies & 4\\
+\hline
+JOP & 2\\
+\hline
+Journal of Statistical Software & 1\\
+\hline
+Legislative Studies Quarterly & 2\\
+\hline
+Michigan Law Review & 1\\
+\hline
+Perspectives on Politics & 1\\
+\hline
+Political Analysis & 5\\
+\hline
+Political Geography & 1\\
+\hline
+Political Research Quarterly & 1\\
+\hline
+PS: Political Science \& Politics & 1\\
+\hline
+QJPS & 4\\
+\hline
+Stanford Law Review & 1\\
+\hline
+State Politics \& Policy Quaterly & 6\\
+\hline
+Studies in American Political Development & 1\\
+\hline
+The Journal of Law and Economics & 1\\
+\hline
+University of Chicago Law Review & 2\\
+\hline
+University of Pennsylvania Law Review & 1\\
+\hline
+Yale Law Journal & 1\\
+\hline
+\end{tabular}
+
+
+\begin{comment}
+
+
+\section{Example of a first section}
+\label{sec:overview}
+
+Here's an example parenthetical citation \citep{lees2010theoretical} and a text citation: \citet{urmson2008autonomous}. There isn't a good, up-to-date BibTeX style for the Chicago style, so we're using \texttt{biblatex-chicago} instead. This means you'll need to run \texttt{biber} instead of \texttt{bibtex} if you're compiling this template on your local \LaTeX{} installation: on Overleaf, \texttt{biber} is run automatically. You can add pre-notes with citations \citep[see also][]{urmson2008autonomous} too, as well as multiple citations \citep{geiger2012we,leesother} in a single \verb|\citep{...}| or \verb|\citet{...}|. 
+
+This is an equation, numbered
+\begin{equation}
+l(\Lambda)=\sum_{i=1}^{n} \sum_{w=1}^{q} (z_{i w} \ln (\lambda_{i w}) - \lambda_{i w} - \ln (z_{i w}!))
+\label{eq:poisson}
+\end{equation}
+and one that is not numbered
+\begin{equation*}
+\int_0^{+\infty}e^{-x^2}dx=\frac{\sqrt{\pi}}{2}
+\end{equation*}
+and one inlined: $e^{i\pi}=-1$. As usual you can cross-reference equations with Equation \ref{eq:poisson} or \eqref{eq:poisson}.
+
+Figure \ref{fig:example} shows a normal figure, while figure \ref{fig:twosubs} show one made up of two sub-figures. Figure \ref{fig:landscape} is an example of a landscaped figure. You can use the \verb|\subcaption{...}| command from the \texttt{subcaption} package to add captions for subfigures and subtables, but do not use the \texttt{subfigure} package: it is incompatible with this template.
+
+\begin{figure}[bt]
+\centering
+\includegraphics[width=0.6\textwidth]{example-image}
+\caption{This is a figure caption. Let's see what happens when it's long and contains citations \citep{geiger2012we} and cross-references: \ref{sec:overview}. Yep, works. Captions should not contain manual line breaks!}
+\label{fig:example}
+\end{figure}
+
+\begin{table}[bt]
+\caption{Automobile Land Speed Records (GR 5-10). Source: \url{https://www.sedl.org/afterschool/toolkits/science/pdf/ast_sci_data_tables_sample.pdf}}
+\label{tab:example}
+\centering
+\begin{tabular}{l l l l r}
+\headrow \thead{Speed (mph)} & \thead{Driver} & \thead{Car} & \thead{Engine} & \thead{Date} \\
+407.447     & Craig Breedlove & Spirit of America          & GE J47    & 8/5/63   \\
+413.199     & Tom Green       & Wingfoot Express           & WE J46    & 10/2/64  \\
+434.22      & Art Arfons      & Green Monster              & GE J79    & 10/5/64  \\
+468.719     & Craig Breedlove & Spirit of America          & GE J79    & 10/13/64 \\
+526.277     & Craig Breedlove & Spirit of America          & GE J79    & 10/15/65 \\
+536.712     & Art Arfons      & Green Monster              & GE J79    & 10/27/65 \\
+555.127     & Craig Breedlove & Spirit of America, Sonic 1 & GE J79    & 11/2/65  \\
+576.553     & Art Arfons      & Green Monster              & GE J79    & 11/7/65  \\
+600.601     & Craig Breedlove & Spirit of America, Sonic 1 & GE J79    & 11/15/65 \\
+622.407     & Gary Gabelich   & Blue Flame                 & Rocket    & 10/23/70 \\
+633.468     & Richard Noble   & Thrust 2                   & RR RG 146 & 10/4/83  \\
+763.035     & Andy Green      & Thrust SSC                 & RR Spey   & 10/15/97\\
+\end{tabular}
+
+\end{table}
+
+
+
+
+\begin{figure}
+\begin{minipage}{0.47\textwidth}
+\includegraphics[width=\linewidth]{example-image}
+\subcaption{This is a subfigure}
+\end{minipage}
+\hfill
+\begin{minipage}{0.47\textwidth}
+\includegraphics[width=\linewidth]{example-image}
+\subcaption{This is another subfigure}
+\end{minipage}
+
+\caption{This is a caption for the entire figure}
+\label{fig:twosubs}
+\end{figure}
+
+\begin{sidewaysfigure}
+\centering
+\includegraphics[width=19cm]{example-image}
+\caption{This is a figure caption}
+\label{fig:landscape}
+\end{sidewaysfigure}
+
+
+\blinddocument
+
+A supplementary material section will always appear before the Reference list. If you're certain that your submission won't have any supplementary material, you can add the \texttt{nosupp} option to the document class declaration, i.e. 
+\begin{quote}
+\verb|\documentclass[nosupp]{cup-pan}|
+\end{quote}
+
+
+\end{comment}
+
+\printbibliography
+
+
+\end{document}
