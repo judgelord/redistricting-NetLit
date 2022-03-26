@@ -37,7 +37,7 @@ knitr::opts_chunk$set(echo = TRUE,
                       split = T,
                       fig.align = 'center', 
                       fig.path='../figs/',
-                      fig.retina = 1,
+                      fig.retina = 8,
                       warning=FALSE, 
                       message=FALSE)
 
@@ -1031,8 +1031,3 @@ pub_table <- master_bib %>%
 kable(pub_table)
 
 ```
-
-
-
-
-
