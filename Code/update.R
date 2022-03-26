@@ -51,6 +51,11 @@ if(gs4_has_token()){
   # to nodes missing node attributes
   literature %>% filter(!to  %in% node_attributes$node, !is.na(to)) %>% select(to)  %>% knitr::kable("markdown")
   
+  master_bib <-  googledrive::drive_get("redistricting vars") %>%
+    gs4_get() %>% 
+    read_sheet("Master bib")
+  
+  save(master_bib, file =  here("data", "master_bibliography.rda"))
   
 } else { 
   warning("Google sheets is not authorized, run lines above to get auth tokens if you want to update the data.")}
