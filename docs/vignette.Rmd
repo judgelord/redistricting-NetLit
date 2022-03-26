@@ -37,7 +37,7 @@ knitr::opts_chunk$set(echo = TRUE,
                       split = T,
                       fig.align = 'center', 
                       fig.path='../figs/',
-                      fig.retina = 8,
+                      fig.retina = 1, #FIXME change to 8 for paper-quality figs (BUT HIGHER RESOLUTION IS TOO BIG FOR GIT)
                       warning=FALSE, 
                       message=FALSE)
 
