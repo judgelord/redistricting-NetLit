@@ -1,17 +1,16 @@
 ---
 title: "netlit  Vignette"
-subtitle: "Redistricting Literature"
-author:
+author: "Devin Judge-Lord, Adeline Lo & Kyler Hudson"
+subtitle: Redistricting Literature
 output:
-    html_document:
-      highlight: zenburn
-      toc: true
-      toc_float: true
-      code_folding: hide
-    #   toc: true
-    #   keep_tex: true
-    # pdf_document:
-editor_options: 
+  pdf_document:
+    toc: yes
+  html_document:
+    highlight: zenburn
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+editor_options:
   chunk_output_type: console
 ---
 
@@ -65,13 +64,15 @@ node_attributes <- read_csv(here("data", "node_attributes.csv"))
 ```
 
 
-There are multiple packages to work with networks, but the most popular is `igraph` because it's flexible and easy. Other packages include `sna` and `networks`.
+There are multiple packages to work with networks, but the most popular one used is often `igraph` because of its flexibility and ease in usage Other commonly used packages include `sna` and `networks`. This package has dependencies from the `igraph` package and the user will need to have an up-to-date installation of it.
 
 To use igraph functions, we first need to create an `igraph` object. We can use the `graph_from_data_frame` function, which takes two arguments: `d`, a data frame with the edge list in the first two columns; and `vertices`, a data frame with node data with the node label in the first column. (igraph calls the nodes `vertices`, but it's exactly the same thing.)
 
 ```{r}
 g <- graph_from_data_frame(d = literature %>% 
-                        dplyr::select(from, to, everything())#, vertices =  node_attributes
+                        dplyr::select(from, 
+                                      to, 
+                                      everything())#, vertices = node_attributes
                       )
 
 g
@@ -79,7 +80,7 @@ g
 # attributes of the nodes
 vertex_attr(g) %>% 
   as_tibble() %>% 
-  kablebox()
+  head()
 ```
 
 From this `igraph` object, one can use `igraph` functions to generate network statistics. However, this involves several steps and the output is not tidy. To simplify generating network statistics from literature reviews, we introduce the `netlit` package. 
@@ -115,9 +116,9 @@ data("literature")
 head(literature)
 ```
 
-`netlit` offers four functions: `make_edgelist()`, `make_nodelist()`, `augment_nodelist()`, and `review()`. 
+`netlit` offers four main functions: `make_edgelist()`, `make_nodelist()`, `augment_nodelist()`, and `review()`. 
 
-`review()` is the primary function (and probably the only one you need). The others are helper functions that perform the individual steps that `review()` does all at once. `review()` takes in a dataframe with at least two columns representing linked concepts (e.g., a cause and an effect) and returns data augmented with network statistics. Users must either specify "from" nodes and "to" nodes with the `from` and `to` arguments or include columns named `from` and `to` in the supplied `data` object.
+`review()` is the primary function. The others are helper functions that perform the individual steps that `review()` does all at once. `review()` takes in a dataframe with at least two columns representing linked concepts (e.g., a cause and an effect) and returns data augmented with network statistics. Users must either specify "from" nodes and "to" nodes with the `from` and `to` arguments or include columns named `from` and `to` in the supplied `data` object.
 
 `review()` returns a list of three objects: 
 
@@ -159,7 +160,7 @@ head(lit$nodelist)
 Tip: to retain all variables from `literature`, use `edge_attributes = names(literature)`.
 
 
-## More Advanced Uses
+## More Advanced Uses: larger networks, visualizating your network, network descriptives
 
 Additional columns in the redistricting literature data include discriptions of the `edge` (the relationship between the `to` and `from` concepts), the theorized `mechanism`, and `cite_weight`---the number of studies in the literature that cite that that causal relationship.  
 
@@ -211,10 +212,11 @@ literature$cite_weight %<>%  replace_na(0)
 literature %<>% mutate(partisan = str_c(to, from) %>% str_detect("Partisan"),
                        comm = str_c(to, from) %>% str_detect("Commun"),
                        confound = case_when(
-                         from == "Preserve\nCommunities\nOf Interest" & to == "Rolloff" ~ T,
-                         from == "Voter\nInformation\nAbout Their\nDistrict" & to == "Rolloff" ~ T,
-                         from == "Preserve\nCommunities\nOf Interest" & to == "Voter\nInformation\nAbout Their\nDistrict" ~ T,
-                       T ~ F),
+      from == "Preserve\nCommunities\nOf Interest" & to == "Rolloff" ~ T,
+      from == "Voter\nInformation\nAbout Their\nDistrict" & to == "Rolloff" ~ T,
+      from == "Preserve\nCommunities\nOf Interest" 
+            & to == "Voter\nInformation\nAbout Their\nDistrict" ~ T,
+      T ~ F),
               empirical = ifelse(!is.na(cites_empirical),
                                  "Empirical work", 
                                  "No empirical work"))
@@ -226,10 +228,10 @@ lit <- review(literature,
               )
 
 edges <- lit$edgelist
-kablebox(edges)
+head(edges)
 
 nodes <- lit$nodelist
-kablebox(nodes)
+head(nodes)
 
 # define igraph object as g
 g <- lit$graph
@@ -261,7 +263,7 @@ plot(g)
 
 For plotting options, you can check `?igraph.plotting`. For example, we can set the vertex color, label colors, the size of the labels, curvature to the edge and edge color.
 
-```{r igraph2, fig.width=10, fig.height=7}
+```{r igraph2, fig.width=8, fig.height=6}
 plot(g,
      vertex.color = "grey", # change color of nodes
      vertex.label.color = "black", # change color of labels
@@ -275,7 +277,7 @@ plot(g,
 
 We can also plot using the package `ggnetwork` to tidy the `igraph` object so that we can use ggplot.
 
-```{r ggnetwork, fig.width=10, fig.height=7}
+```{r ggnetwork, fig.width=7, fig.height=6}
 # install.packages("ggnetwork")
 library(ggnetwork)
 
@@ -285,7 +287,10 @@ n <- ggnetwork(g)
 
 n2 <- n %>% filter(partisan) %>% mutate(partisan = FALSE)
 
-n %<>% full_join(n2) %>% mutate(partisan = ifelse(partisan, "Mentions partisanship", "Other nodes"))
+n %<>% full_join(n2) %>% 
+  mutate(partisan = ifelse(partisan, 
+                           "Mentions partisanship", 
+                           "Other nodes"))
 
 set.seed(12)
 
@@ -324,7 +329,7 @@ p
 
 Facets retain node position:
 
-```{r ggnetwork-partisan, fig.width=14, fig.height=7}
+```{r ggnetwork-partisan, fig.width=7, fig.height=6}
 p + facet_wrap("partisan")
 ```
 
@@ -351,19 +356,19 @@ p <- ggplot(n) +
 ```
 
 
-```{r ggnetwork-edge-betweenness}
+```{r ggnetwork-edge-betweenness, fig.width=7, fig.height=6}
 p + aes(color = edge_betweenness) + labs(color = "Edge Betweenness")
 ```
 
 
-```{r ggnetwork-node-betweenness}
+```{r ggnetwork-node-betweenness, fig.width=7, fig.height=6}
 p + aes(color = betweenness) + labs(color = "Node Betweenness")
 ```
 
 
 ### Degree
 
-```{r ggnetwork-degree}
+```{r ggnetwork-degree, fig.width=7, fig.height=6}
 p + aes(color = degree) + labs(color = "Degree")
 ```
 
@@ -380,7 +385,7 @@ We can also plot using the package `ggraph` package to plot the `igraph` object.
 
 This package allows us to plot self-ties, but it is more difficult to use ggplot features (e.g. colors and legend labels).
 
-```{r ggraph, fig.width=10, fig.height=7, cache= FALSE}
+```{r ggraph, fig.width=6, fig.height=6, cache= FALSE}
 # install.packages("ggraph")
 library(tidyverse)
 library(ggnetwork)
@@ -438,7 +443,7 @@ p
 
 #### Subgraphs
 
-```{r ggraph-subset, fig.width=20, fig.height=7, cache=FALSE}
+```{r ggraph-subset, fig.width=7, fig.height=6, cache=FALSE}
 p + facet_wrap("comm")
 
 p + facet_wrap("confound")
@@ -448,7 +453,7 @@ Now modify some of these plotting attributes so that they are function of networ
 
 ### Betweenness
 
-```{r gggraph-edge-betweenness}
+```{r gggraph-edge-betweenness, fig.width=7, fig.height=6}
 ggraph(g, layout = 'fr') + 
   geom_node_point(size = 10, 
                   alpha = .1) + 
@@ -473,15 +478,60 @@ scale_edge_color_viridis(begin = 0.2, end = .9, direction = -1, option = "cividi
        edge_linetype = "") 
 ```
 
-```{r gggraph-betweenness}
+```{r gggraph-betweenness, fig.width=7, fig.height=6}
+
+p <- ggraph(g, layout = 'fr') + 
+  geom_node_point(
+    aes(color = betweenness  ),
+    size = 6, 
+    alpha = .7
+    ) + 
+  geom_edge_arc2(
+    aes(
+      start_cap = circle(3, 'mm'),
+      end_cap = circle(6, 'mm'),
+      color = cite_weight %>% as_factor(),
+      linetype = empirical
+      ),
+    curvature = 0,
+    arrow = arrow(length = unit(2, 'mm'), 
+                  #angle = 45,
+                  type = "open")
+    ) +
+  geom_edge_loop(
+      aes( color = cite_weight %>% as_factor(),
+      start_cap = circle(5, 'mm'),
+      end_cap = circle(2, 'mm'),
+      linetype = empirical
+      ),
+      n = 300,
+      strength = .6,
+    arrow = arrow(length = unit(2, 'mm'), 
+                  #angle = 45, 
+                  type = "open")
+    ) +
+  geom_node_text( aes(label = name), size = 2.3) + 
+  theme_blank() + 
+  theme(legend.position="bottom") + 
+  labs(edge_color = "Number of\nPublications",
+       color = "Betweeneness",
+       edge_linetype = "") + 
+scale_edge_color_viridis(discrete = TRUE,
+                         option = "plasma", begin = 0, end = .9, direction = -1) +
+  scale_color_gradient2()
+
+p 
+
+
 ggraph(g, layout = 'fr') + 
   geom_node_point(aes(color = betweenness),
                   size = 10, 
                   alpha = 1) + 
   theme_blank() + 
   theme(legend.position="bottom"        ) + 
-  scale_color_viridis_c(begin = .5, end = 1, direction = -1, option = "cividis") + 
+ scale_color_viridis_c(begin = .5, end = 1, direction = -1, option = "cividis") + 
 scale_edge_color_viridis(begin = 0.2, end = .9, direction = -1, option = "cividis")  +    
+  #scale_color_gradient2(low = "light blue") + 
   geom_edge_arc2(aes(
     start_cap = circle(3, 'mm'),
     end_cap = circle(5, 'mm'),
@@ -499,17 +549,62 @@ scale_edge_color_viridis(begin = 0.2, end = .9, direction = -1, option = "cividi
                  size = 2.3) 
 ```
 
+### Coreness
 
+```{r gggraph-coreness, eval=FALSE, fig.width=7, fig.height=6}
+
+p <- ggraph(g, layout = 'fr') + 
+  geom_node_point(
+    aes(color = coreness  ),
+    size = 6, 
+    alpha = .7
+    ) + 
+  geom_edge_arc2(
+    aes(
+      start_cap = circle(3, 'mm'),
+      end_cap = circle(6, 'mm'),
+      color = cite_weight %>% as_factor(),
+      linetype = empirical
+      ),
+    curvature = 0,
+    arrow = arrow(length = unit(2, 'mm'), 
+                  #angle = 45,
+                  type = "open")
+    ) +
+  geom_edge_loop(
+      aes( color = cite_weight %>% as_factor(),
+      start_cap = circle(5, 'mm'),
+      end_cap = circle(2, 'mm'),
+      linetype = empirical
+      ),
+      n = 300,
+      strength = .6,
+    arrow = arrow(length = unit(2, 'mm'), 
+                  #angle = 45, 
+                  type = "open")
+    ) +
+  geom_node_text( aes(label = name), size = 2.3) + 
+  theme_blank() + 
+  theme(legend.position="bottom") + 
+  labs(edge_color = "Number of\nPublications",
+       color = "Coreness",
+       edge_linetype = "") + 
+scale_edge_color_viridis(discrete = TRUE,
+                         option = "plasma", begin = 0, end = .9, direction = -1) +
+  scale_color_gradient2()
+
+p 
+```
 ### Degree
 
-```{r gggraph-degree}
+```{r gggraph-degree, fig.width=7, fig.height=6}
 ggraph(g, layout = 'fr') + 
   geom_node_point(aes(color = degree),
                   size = 10, 
                   alpha = 1) + 
   theme_blank() + 
   theme(legend.position="bottom"        ) + 
-  scale_color_viridis_c(begin = .5, end = 1, direction = -1, option = "virdis") + 
+  scale_color_gradient2() + 
 scale_edge_color_viridis(begin = 0.2, end = .9, direction = -1, option = "cividis")  +    
   geom_edge_arc2(aes(
     start_cap = circle(3, 'mm'),
@@ -558,7 +653,7 @@ scale_edge_color_viridis(begin = 0.2, end = .9, direction = -1, option = "cividi
 
 
 ## With `visnetowrk`
-```{r visnetwork}
+```{r visnetwork, fig.width=7, fig.height=6}
 
 library(visNetwork)
 
@@ -595,17 +690,17 @@ nodes <- nodes %>% mutate(label = id,
                           level = ifelse(type == "goal", 1:2, 3:4),
                           # FontAwesome.com shapes for fun
                           shape = "icon",
-                            icon.color = case_when(type =="goal" ~ "black",
-                                                   type !="goal" ~ "black"),
-                            icon.code = case_when(type == "condition" ~ "f205", # chess board
-                                                  type == "goal" ~ "f24e", # scale  "f05b", # crosshairs
-                                                  type == "policy" ~ "f0e3", # gavel
-                                                  type == "value" ~ "f004", # "f4be", # hand with heart
-                                                  type == "effect" ~ "f080", # "f681", # data 
-                                                  type == "metric" ~ "f1de",# "f548", # ruler 
-                                                  TRUE ~ "f0c8"), #square
-                            icon.face =  "'FontAwesome'",
-                            icon.weight = "bold")
+       icon.color = case_when(type =="goal" ~ "black",
+                              type !="goal" ~ "black"),
+       icon.code = case_when(type == "condition" ~ "f205", # chess board
+                             type == "goal" ~ "f24e", # scale  "f05b", # crosshairs
+                             type == "policy" ~ "f0e3", # gavel
+                             type == "value" ~ "f004", # "f4be", # hand with heart
+                             type == "effect" ~ "f080", # "f681", # data 
+                             type == "metric" ~ "f1de",# "f548", # ruler 
+                             TRUE ~ "f0c8"), #square
+       icon.face =  "'FontAwesome'",
+       icon.weight = "bold")
 
 # format edges
 edges <- edges %>% mutate(
@@ -618,12 +713,19 @@ edges <- edges %>% mutate(
 
 # make directed graph
 visNetwork(nodes=nodes, edges=edges, width = "100%") %>% 
-  visEdges(width=5, color= edges$color, arrows = "to", arrowStrikethrough = F, smooth = T) %>%
+  visEdges(width=5, 
+           color= edges$color, 
+           arrows = "to", 
+           arrowStrikethrough = F, 
+           smooth = T) %>%
   visNodes(scaling=list(min=40, max=50)) %>%
-  visOptions(highlightNearest = list(enabled = T, degree = 1, hover = T)) %>%
+  visOptions(highlightNearest = list(enabled = T, 
+                                     degree = 1, 
+                                     hover = T)) %>%
   visInteraction(hover=TRUE, zoomView = TRUE) %>%
   #visHierarchicalLayout() %>% 
-  visPhysics(solver = "forceAtlas2Based", forceAtlas2Based = list(gravitationalConstant = -50)) %>%
+  visPhysics(solver = "forceAtlas2Based", 
+             forceAtlas2Based = list(gravitationalConstant = -50)) %>%
   addFontAwesome(name = "font-awesome-visNetwork") %>%
 visLayout(randomSeed = 12) # to have always the same network  
 }
@@ -631,7 +733,7 @@ visLayout(randomSeed = 12) # to have always the same network
 
 ### The core nodes
 
-```{r dag-core}
+```{r dag-core, fig.width=7, fig.height=6}
 core <- literature %>% filter(core)
 
 core %<>% review(
@@ -643,7 +745,7 @@ literature_plot(core)
 ```
 
 ### The whole mess
-```{r dag-whole}
+```{r dag-whole, fig.width=7, fig.height=6}
 # plot core nodes
 literature_plot(lit)
 ```
@@ -684,7 +786,7 @@ sort(-strength(g))  %>% head() %>% kable()
 __Closeness__ measures how many steps are required to access every other node from a given node. It's a measure of how long information takes to arrive (who hears news first?). Higher values mean less centrality. Sort the `closeness` of the network (normalize it) and print it out.
 
 ```{r}
-sort(-closeness(g, normalized=TRUE))
+sort(-closeness(g, normalized=TRUE)) %>% head() %>% kable()
 ```
 
 Detect gerrymandering, public participation, floor votes align with district preferences, and constitutional tests are closest to all other concepts in the network.
@@ -706,13 +808,13 @@ sort(-eigen_centrality(g)$vector) %>% head() %>% kable()
 __Page rank__ approximates probability that any message will arrive to a particular node. This algorithm was developed by Google founders, and originally applied to website links. Sort the returned *vector* from the `page_rank` of the network and print it out.
 
 ```{r}
-sort(page_rank(g)$vector)
+sort(page_rank(g)$vector)  %>% head() %>% kable()
 ```
 
 __Authority score__ is another measure of centrality [initially applied to the Web](https://en.wikipedia.org/wiki/HITS_algorithm). A node has high authority when it is linked by many other nodes that are linking many other nodes. Sort the returned *vector* from the `authority_score` of the network and print it out.
 
 ```{r}
-sort(authority_score(g)$vector)
+sort(authority_score(g)$vector)  %>% head() %>% kable()
 ```
 
 Finally, not exactly a measure of centrality, but we can learn more about who each node is connected to by using the following functions: `neighbors` (for direct neighbors) and `ego` (for neighbors up to `n` neighbors away). Find the neighbors of "partisan advantage". Find the concept's neighbors up to order 2 away.
@@ -819,55 +921,118 @@ The final way in which we can think about network communities is in terms of hie
 
 __K-core decomposition__ allows us to identify the core and the periphery of the network. A k-core is a maximal subnet of a network such that all nodes have at least degree K.
 
-```{r, fig.height=5, figh.width=6}
-coreness(g)
+```{r, figh.width=6, fig.height=7}
+coreness(g)  %>% head() %>% kable()
 which(coreness(g)==6) # what is the core of the network?
-which(coreness(g)==1) # what is the periphery of the network?
+which(coreness(g)==1)  %>% head() %>% kable() # what is the periphery of the network?
 
 # Visualizing network structure
 V(g)$coreness <- coreness(g)
-par(mfrow=c(2, 3), mar=c(0.1,0.1,1,0.1))
+par(mfrow=c(3, 2), mar=c(0.1,0,1,15)) # mai = c(0, 0, 0, 0),
 set.seed(777); fr <- layout_with_fr(g)
 for (k in 1:6){
   V(g)$color <- ifelse(V(g)$coreness>=k, "orange", "grey")
-  plot(g, main=paste0(k, '-core shell'), layout=fr)
+  plot(g, main=paste0(k, '-core shell'), layout=fr, margin=0)
 }
 ```
 
-```{r igraph-cluster-walktrap}
+```{r igraph-cluster-walktrap, figh.width=6, fig.height=6}
 wc <- cluster_walktrap(g)
 modularity(wc)
-membership(wc)
+membership(wc) %>% head() %>% kable()
 V(g)$shortname<-V(g)$name #shortened easier to read ver name
-V(g)$shortname[V(g)$shortname=="concentration of likely donors in map-drawing party's districts"]<- "donor concentration"
-V(g)$shortname[V(g)$shortname=="individual legislator voting"]<- "legislator voting"
-V(g)$shortname[V(g)$shortname=="effect of personal vote"]<- "personal vote"
-V(g)$shortname[V(g)$shortname=="detect gerrymandering"]<- "detect gerrymander"
-V(g)$shortname[V(g)$shortname=="proportional minority representation"]<- "prop. minority rep"
-V(g)$shortname[V(g)$shortname=="Number of competitive districts"]<- "no. competitive district"
-V(g)$shortname[V(g)$shortname=="legislator information about district"]<- "legis. info on district"
-V(g)$shortname[V(g)$shortname=="floor votes align with district preferences"]<- "legis. votes with district pref."
-V(g)$shortname[V(g)$shortname=="stability in voters' fellow constituents"]<- "constituent stability"
-V(g)$shortname[V(g)$shortname=="voter information about their district"]<- "voter info on district"
-V(g)$shortname[V(g)$shortname=="legislator information seeking"]<- "legis. info-seek"
-V(g)$shortname[V(g)$shortname=="Alignment of floor vote breakdown with statewide majority of voters"]<- "Floor vote align state voters"
-V(g)$shortname[V(g)$shortname=="number of competitive districts" ]<- "no. competitive district" 
-V(g)$shortname[V(g)$shortname=="House-Senate Delegation alignment" ]<- "Congress-SH align" 
-V(g)$shortname[V(g)$shortname=="unconstitutional government interest"]<- "unconstit gov interest"
-V(g)$shortname[V(g)$shortname=="number of minority representatives"]<- "no. minority reps"
-V(g)$shortname[V(g)$shortname=="representation of majority opinion"]<- "represent majority opinion"
-V(g)$shortname[V(g)$shortname=="elite ideological moderation"]<- "elite ideol moderation"
-V(g)$shortname[V(g)$shortname=="partisan gerrymandering"]<- "partisan gerrymander"
-V(g)$shortname[V(g)$shortname=="legislative majority-seeking behavior"]<- "legis majority-seeking behavior"
-V(g)$shortname[V(g)$shortname=="change in constituency boundaries"]<- "change constituent boundary"
-V(g)$shortname[V(g)$shortname=="demographic and ideological sorting"]<- "demog/ideol sorting"
-V(g)$shortname[V(g)$shortname=="dispersed minority population"]<- "dispersed minority pop"
-V(g)$shortname[V(g)$shortname=="majority minority districts"]<- "majority minority district"
+V(g)$shortname[V(g)$shortname==
+                 "concentration of likely donors 
+               in map-drawing party's districts"] <- "donor concentration"
+V(g)$shortname[V(g)$shortname==
+                 "individual legislator voting"] <- "legislator voting"
+V(g)$shortname[V(g)$shortname==
+                 "effect of personal vote"] <- "personal vote"
+V(g)$shortname[V(g)$shortname==
+                 "detect gerrymandering"] <- "detect gerrymander"
+V(g)$shortname[V(g)$shortname==
+                 "proportional minority representation"] <- "prop. minority rep"
+V(g)$shortname[V(g)$shortname==
+                 "Number of competitive districts"] <- "no. competitive district"
+V(g)$shortname[V(g)$shortname==
+                 "legislator information about district"] <- "legis. info on district"
+V(g)$shortname[V(g)$shortname==
+                 "floor votes align with 
+               district preferences"] <- "legis. votes with district pref."
+V(g)$shortname[V(g)$shortname==
+                 "stability in voters' fellow constituents"] <- "constituent stability"
+V(g)$shortname[V(g)$shortname==
+                 "voter information about their district"] <- "voter info on district"
+V(g)$shortname[V(g)$shortname==
+                 "legislator information seeking"] <- "legis. info-seek"
+V(g)$shortname[V(g)$shortname==
+                 "Alignment of floor vote breakdown 
+               with statewide majority of voters"] <- "Floor vote align state voters"
+V(g)$shortname[V(g)$shortname==
+                 "number of competitive districts" ] <- "no. competitive district" 
+V(g)$shortname[V(g)$shortname==
+                 "House-Senate Delegation alignment" ] <- "Congress-SH align" 
+V(g)$shortname[V(g)$shortname==
+                 "unconstitutional government interest"] <- "unconstit gov interest"
+V(g)$shortname[V(g)$shortname==
+                 "number of minority representatives"] <- "no. minority reps"
+V(g)$shortname[V(g)$shortname==
+                 "representation of majority opinion"] <- "represent majority opinion"
+V(g)$shortname[V(g)$shortname==
+                 "elite ideological moderation"] <- "elite ideol moderation"
+V(g)$shortname[V(g)$shortname==
+                 "partisan gerrymandering"] <- "partisan gerrymander"
+V(g)$shortname[V(g)$shortname==
+                 "legislative majority-
+               seeking behavior"] <- "legis majority-seeking behavior"
+V(g)$shortname[V(g)$shortname==
+                 "change in constituency boundaries"] <- "change constituent boundary"
+V(g)$shortname[V(g)$shortname==
+                 "demographic and ideological sorting"]<- "demog/ideol sorting"
+V(g)$shortname[V(g)$shortname==
+                 "dispersed minority population"]<- "dispersed minority pop"
+V(g)$shortname[V(g)$shortname==
+                 "majority minority districts"]<- "majority minority district"
 
 set.seed(123)
 pdf(file=here::here("figs","redistrict_communities.pdf"),width=13,height=13)
 plot(g)
 plot(wc, g, vertex.label=V(g)$shortname,vertex.label.dist=1,vertex.color="gray20")
 dev.off()
+par(mar=c(1,0,1,8))
 plot(g)
 ```
+
+
+
+```{r pub-table, fig.width=7, fig.height=6, eval = FALSE}
+#Publication Table
+citations <- c(literature$cites)
+
+
+load(here("Data", "master_bibliography.rda"))
+
+master_bib <- master_bib %>% 
+  filter(str_detect(paste(citations, collapse = "|"), Author))
+
+pub_table <- master_bib %>% 
+  group_by(Publication) %>% 
+  summarise(Articles = n()) %>%
+  mutate(Publication = case_when(
+    Publication == "AJPS" ~ "American Journal of Political Science",
+    Publication == "APSR" ~ "American Political Science Review",
+    Publication == "BJPS" ~ "British Journal of Political Science",
+    Publication == "JOP" ~ "The Journal of Politics",
+    Publication == "NCL Review" ~ "North Carolina Law Review",
+    Publication == "QJPS" ~ "Quarterly Journal of Political Science",
+    TRUE ~ Publication
+  ))
+
+kable(pub_table)
+
+```
+
+
+
+
+
