@@ -29,7 +29,7 @@ if(gs4_has_token()){
     select(to, from, cites, cites_empirical) 
   
   literature %>% 
-    save(file =  here("data", "literature.rda") )
+    save(file =  here::here("data", "literature.rda") )
   
   node_attributes <-  googledrive::drive_get("redistricting vars") %>%
     gs4_get() %>% 
@@ -56,9 +56,11 @@ if(gs4_has_token()){
     read_sheet("Master bib")
   
   save(master_bib, file =  here("data", "master_bibliography.rda"))
+  literature_metadata <- master_bib
+  save(literature_metadata, file =  here("data", "literature_metadata.rda"))
   
 } else { 
   warning("Google sheets is not authorized, run lines above to get auth tokens if you want to update the data.")}
 
-
+source(here::here("code", "make_vignette_appendix.R"))
 
