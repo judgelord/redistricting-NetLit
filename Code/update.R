@@ -20,7 +20,8 @@ if(gs4_has_token()){
   
   literature <- dag %>% 
     mutate(to = str_to_lower(to),
-           from = str_to_lower(from))
+           from = str_to_lower(from)) %>% 
+    as.data.frame()
   
   write_csv(literature, here("Data",  "literature.csv"))
   
@@ -37,7 +38,8 @@ if(gs4_has_token()){
     mutate(node = str_to_lower(node)) %>%
     distinct() 
 
-  node_attributes %<>% filter(node %in% c(literature$to, literature$from))
+  node_attributes %<>% filter(node %in% c(literature$to, literature$from))  %>% 
+    as.data.frame()
   
   node_attributes %>% write_csv(here("data", "node_attributes.csv"))
   
@@ -53,7 +55,8 @@ if(gs4_has_token()){
   
   master_bib <-  googledrive::drive_get("redistricting vars") %>%
     gs4_get() %>% 
-    read_sheet("Master bib")
+    read_sheet("Master bib")  %>% 
+    as.data.frame()
   
   save(master_bib, file =  here("data", "master_bibliography.rda"))
   literature_metadata <- master_bib
