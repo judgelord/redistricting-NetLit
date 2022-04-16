@@ -1,0 +1,510 @@
+---
+title: "netlit-igraph  Vignette"
+author: "Devin Judge-Lord, Adeline Lo & Kyler Hudson"
+subtitle: Redistricting Literature
+output:
+  #pdf_document:
+  #  toc: yes
+  html_document:
+    highlight: zenburn
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+editor_options:
+  chunk_output_type: console
+---
+
+```{r libraries, warning=FALSE, message=FALSE}
+library(here)
+library(tidyverse)
+library(igraph)
+# The R package files are currently in NetLit/Netlit on dropbox
+library(netlit)
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      cache = TRUE, #FIXME when updating data 
+                      fig.width=8.5, 
+                      split = T,
+                      fig.align = 'center', 
+                      fig.path='../figs/',
+                      fig.retina = 1, #FIXME change to 8 for paper-quality figs (BUT HIGHER RESOLUTION IS TOO BIG FOR GIT)
+                      warning=FALSE, 
+                      message=FALSE)
+
+
+# Table formatting
+library(kableExtra)
+kablebox <- . %>% 
+  slice_head(n = 100) %>%
+  knitr::kable() %>% 
+  kable_styling() %>% 
+  scroll_box(height = "400px")
+```
+
+
+# Network Analysis of the Redistricting Literature Data
+
+```{r data}
+# load data
+literature <- here("Data",  "literature.csv") %>% 
+  read_csv() %>% 
+  filter(cite_weight > 0)
+
+node_attributes <- read_csv(here("data", "node_attributes.csv"))
+```
+
+
+There are multiple packages to work with networks, but the most popular one used is often `igraph` because of its flexibility and ease in usage Other commonly used packages include `sna` and `networks`. This package has dependencies from the `igraph` package and the user will need to have an up-to-date installation of it.
+
+To use igraph functions, we first need to create an `igraph` object. We can use the `graph_from_data_frame` function, which takes two arguments: `d`, a data frame with the edge list in the first two columns; and `vertices`, a data frame with node data with the node label in the first column. (igraph calls the nodes `vertices`, but it's exactly the same thing.)
+
+```{r}
+g <- graph_from_data_frame(d = literature %>% 
+                        dplyr::select(from, 
+                                      to, 
+                                      everything())#, vertices = node_attributes
+                      )
+
+g
+ 
+# attributes of the nodes
+vertex_attr(g) %>% 
+  as_tibble() %>% 
+  head()
+```
+
+From this `igraph` object, one can use `igraph` functions to generate network statistics. However, this involves several steps and the output is not tidy. To simplify generating network statistics from literature reviews, we introduce the `netlit` package. 
+
+# Using the `netlit` R Package 
+
+
+The `netlit`  package provides functions to generate network statistics from a literature review. Specifically, `netlit` provides a wrapper for `igraph` functions to facilitate using network analysis in literature reviews. 
+
+
+Install this package with 
+```
+devtools::install_github("judgelord/netlit")
+```
+
+To install `netlit` from CRAN, run the following:
+
+```{r, eval=FALSE}
+install.packages("netlit")
+```
+
+## Basic Usage
+
+The `review()` function takes in a dataframe, `data`, that includes `from` and `to` columns (a directed graph structure). 
+
+In the example below, we use example data from [this project on redistricting](https://github.com/judgelord/redistricting). These data are a set of related concepts (`from` and `to`) in the redistricting literature and citations for these relationships (`cites` and `cites_empirical`). See `vignette("netlit")` for more details on this example.
+
+```{r}
+library(netlit)
+
+data("literature")
+
+head(literature)
+```
+
+`netlit` offers four main functions: `make_edgelist()`, `make_nodelist()`, `augment_nodelist()`, and `review()`. 
+
+`review()` is the primary function. The others are helper functions that perform the individual steps that `review()` does all at once. `review()` takes in a dataframe with at least two columns representing linked concepts (e.g., a cause and an effect) and returns data augmented with network statistics. Users must either specify "from" nodes and "to" nodes with the `from` and `to` arguments or include columns named `from` and `to` in the supplied `data` object.
+
+`review()` returns a list of three objects: 
+
+1. an augmented `edgelist` (a list of relationships with `edge_betweenness` calculated), 
+2. an augmented `nodelist` (a list of concepts with `degree` and `betweenness` calculated), and 
+3. a `graph` object suitable for use in other `igraph` functions or other network visualization packages. 
+
+Users may wish to include edge attributes (e.g., information about the relationship between the two concepts) or node attributes (information about each concept). We show how to do so below. But first, consider the basic use of `review()`: 
+
+
+```{r}
+lit <- review(literature, from = "from", to = "to")
+
+lit
+
+head(lit$edgelist)
+
+head(lit$nodelist)
+```
+
+Edge and node attributes can be added using the `edge_attributes` and `node_attributes` arguments. `edge_attributes` is a vector that identifies columns in the supplied data frame that the user would like to retain. `node_attributes` is a separate dataframe that contains attributes for each node in the primary data set. The example `node_attributes` data include one column `type` indicating a type for each each node/variable/concept. 
+
+```{r}
+data("node_attributes")
+
+head(node_attributes)
+
+lit <- review(literature,
+              edge_attributes = c("cites", "cites_empirical"),
+              node_attributes = node_attributes)
+
+lit
+
+head(lit$edgelist)
+
+head(lit$nodelist)
+```
+
+Tip: to retain all variables from `literature`, use `edge_attributes = names(literature)`.
+
+
+## More Advanced Uses: larger networks, visualizating your network, network descriptives
+
+Additional columns in the redistricting literature data include discriptions of the `edge` (the relationship between the `to` and `from` concepts), the theorized `mechanism`, and `cite_weight`---the number of studies in the literature that cite that that causal relationship.  
+
+### A Larger Edgelist and Nodelist
+
+```{r}
+# load expanded dataset
+literature <- read_csv(here::here("data", "literature.csv")) 
+
+# clean up text for better visualization 
+literature %<>% 
+  mutate(cites = cites %>% str_remove(",.*|;.*"))
+
+literature$from %<>% str_replace_all("([a-z| |-]{8}) ", 
+                           "\\1\n") 
+
+literature$to %<>% str_replace_all("([a-z| |-]{8}) ", 
+                           "\\1\n") 
+
+literature$from %<>% str_replace_all(" ([a-z| |-]{9})", 
+                           "\n\\1") %>% str_to_title()
+
+literature$to %<>% str_replace_all(" ([a-z| |-]{9})", 
+                           "\n\\1") %>% str_to_title()
+
+literature$from %<>% str_replace("\nOf\n", "\nOf ")
+
+literature$to %<>% str_replace("\nOf\n", "\nOf ")
+
+literature$from %<>% str_replace("\nFellow ", " Fellow\n")
+
+literature$to %<>% str_replace("\nFellow ", " Fellow\n")
+
+literature$from %<>% str_replace("\nState\n", " State\n")
+
+literature$to %<>% str_replace("\nState\n", " State\n")
+
+literature$from %<>% str_replace("\nDistrict\n", " District\n")
+
+literature$to %<>% str_replace("\nDistrict\n", " District\n")
+
+literature$from %<>% str_replace("\nWith\n", " With\n")
+
+literature$to %<>% str_replace("\nWith\n", " With\n")
+
+
+literature$cite_weight %<>%  replace_na(0)
+
+literature %<>% mutate(partisan = str_c(to, from) %>% str_detect("Partisan"),
+                       comm = str_c(to, from) %>% str_detect("Commun"),
+                       confound = case_when(
+      from == "Preserve\nCommunities\nOf Interest" & to == "Rolloff" ~ T,
+      from == "Voter\nInformation\nAbout Their\nDistrict" & to == "Rolloff" ~ T,
+      from == "Preserve\nCommunities\nOf Interest" 
+            & to == "Voter\nInformation\nAbout Their\nDistrict" ~ T,
+      T ~ F),
+              empirical = ifelse(!is.na(cites_empirical),
+                                 "Empirical work", 
+                                 "No empirical work"))
+
+# now with all node and edge attributes 
+lit <- review(literature,
+              edge_attributes = names(literature),
+              node_attributes = node_attributes
+              )
+
+edges <- lit$edgelist
+head(edges)
+
+nodes <- lit$nodelist
+head(nodes)
+
+# define igraph object as g
+g <- lit$graph
+```
+
+### The `igraph` object
+
+```{r}
+g
+```
+
+What does it mean?
+
+- `D` means directed  
+- `N` means named graph  
+- `W` means weighted graph  
+- `name (v/c)` means _name_ is a node attribute and it's a character  
+- `cite_weight (e/n)` means _cite_weight_ is an edge attribute and it's numeric  
+
+---
+
+### Network visualization with `igraph::plot()`
+
+The `plot()` function works out of the box, but the default options are often not ideal:
+
+```{r igraph}
+plot(g)
+```
+
+For plotting options, you can check `?igraph.plotting`. For example, we can set the vertex color, label colors, the size of the labels, curvature to the edge and edge color.
+
+```{r igraph2, fig.width=10, fig.height=7}
+plot(g,
+     vertex.color = "grey", # change color of nodes
+     vertex.label.color = "black", # change color of labels
+     vertex.label.cex = .25, # change size of labels to 25% of original size
+     edge.curved=.25, # add a 25% curve to the edges
+     arrow.size = .2,
+     edge.color="grey20") # change edge color to grey
+```
+
+
+## Node properties
+
+Let's return to `igraph` functions to look at descriptive statistics at the node level. All of these are in some way measures of importance or __centrality__.
+
+The most basic measure is __degree__, the number of adjacent edges to each node. It is often considered a measure of direct influence. In the redistricting network, it will be the unique number of concepts that each concept is interacting with. Sort the `degree` of the network and print it out. 
+
+```{r}
+sort(-degree(g)) %>% head() %>% kable()
+```
+
+Partisan advantage (degree=14), followed by a three way tie of communities preserved, partisan gerrymandering and compactness (each degree=5) are the most "central" concepts covered in the redistricting literature.
+
+
+In directed graphs, there are three types of degree: indegree (incoming edges), outdegree (outgoing edges), and total degree. You can find these using `mode="in"` or `mode="out"` or `mode="total"`. 
+
+__Strength__ is a weighted measure of degree that takes into account the number of edges that go from one node to another. In this network, it will be the total number of interactions of each concept with any other concept. Sort the `strength` of the network and print it out.
+
+```{r}
+sort(-strength(g))  %>% head() %>% kable()
+```
+
+__Closeness__ measures how many steps are required to access every other node from a given node. It's a measure of how long information takes to arrive (who hears news first?). Higher values mean less centrality. Sort the `closeness` of the network (normalize it) and print it out.
+
+```{r}
+sort(-closeness(g, normalized=TRUE)) %>% head() %>% kable()
+```
+
+Detect gerrymandering, public participation, floor votes align with district preferences, and constitutional tests are closest to all other concepts in the network.
+
+__Betweenness__ measures brokerage or gatekeeping potential. It is (approximately) the number of shortest paths between nodes that pass through a particular node. Sort the `betweenness` of the network and print it out.
+
+```{r}
+sort(-betweenness(g)) %>% head() %>% kable()
+```
+
+Partisan advantage has by far the highest measure of brokerage/gatekeeping potential, followed by number of competitive districts. These two concepts allow for the fastest facilitation of ideas in the redistricting network; in other words, if we were to design a causal story and try to connect two concepts, the fastest way to connect them would most often be through the idea of partisan advantage.
+
+Eigenvector centrality is a measure of being well-connected connected to the well-connected. First eigenvector of the graph adjacency matrix. Only works with undirected networks. Sort the returned *vector* from the `eigen_centrality` of the network and print it out. (not for this application)
+
+```{r, eval=F}
+sort(-eigen_centrality(g)$vector) %>% head() %>% kable()
+```
+
+__Page rank__ approximates probability that any message will arrive to a particular node. This algorithm was developed by Google founders, and originally applied to website links. Sort the returned *vector* from the `page_rank` of the network and print it out.
+
+```{r}
+sort(page_rank(g)$vector)  %>% head() %>% kable()
+```
+
+__Authority score__ is another measure of centrality [initially applied to the Web](https://en.wikipedia.org/wiki/HITS_algorithm). A node has high authority when it is linked by many other nodes that are linking many other nodes. Sort the returned *vector* from the `authority_score` of the network and print it out.
+
+```{r}
+sort(authority_score(g)$vector)  %>% head() %>% kable()
+```
+
+Finally, not exactly a measure of centrality, but we can learn more about who each node is connected to by using the following functions: `neighbors` (for direct neighbors) and `ego` (for neighbors up to `n` neighbors away). Find the neighbors of "partisan advantage". Find the concept's neighbors up to order 2 away.
+
+```{r}
+neighbors(g, v=which(V(g)$name=="partisan advantage"))
+ego(g, order=2, nodes=which(V(g)$name=="partisan advantage"))
+```
+
+## Network properties
+
+Let's now try to describe what a network looks like as a whole. We can start with measures of the __size__ of a network. `diameter` is the length of the longest path (in number of edges) between two nodes. We can use `get_diameter` to identify this path. `mean_distance` is the average number of edges between any two nodes in the network. We can find each of these paths between pairs of edges with `distances`. Find the diameter and mean distances of the network.
+
+```{r}
+diameter(g, directed=TRUE, weights=NA)
+get_diameter(g, directed=TRUE, weights=NA)
+mean_distance(g, directed=TRUE)
+dist <- distances(g, weights=NA)
+dist[1:5, 1:5]
+```
+
+`edge_density` is the proportion of edges in the network over all possible edges that could exist. Find the `edge_density` of the network.
+
+```{r}
+edge_density(g)
+# 22*21 possible edges / 2 because it's undirected = 231 possible edges
+# but only 60 exist
+60/((22*21)/2)
+```
+
+`reciprocity` measures the propensity of each edge to be a mutual edge; that is, the probability that if `i` is connected to `j`, `j` is also connected to `i`. Find the reciprocity of the network -- you should find that it is 1. Explain why you think reciprocity=1 in this case.
+
+```{r}
+reciprocity(g)
+```
+
+`transitivity`, also known as clustering coefficient, measures that probability that adjacent nodes of a network are connected. In other words, if `i` is connected to `j`, and `j` is connected to `k`, what is the probability that `i` is also connected to `k`? Find the transitivity of the network.
+
+```{r}
+transitivity(g)
+```
+
+## Network communities
+
+Networks often have different clusters or communities of nodes that are more densely connected to each other than to the rest of the network. Let's cover some of the different existing methods to identify these communities.
+
+The most straightforward way to partition a network is into __connected components__. Each component is a group of nodes that are connected to each other, but _not_ to the rest of the nodes. For example, this network has two components.
+
+```{r igraph3}
+# components(g)
+par(mar=c(0,0,0,0)); plot(g)
+```
+
+Most networks have a single __giant connected component__ that includes most nodes. Most studies of networks actually focus on the giant component (e.g. the shortest path between nodes in a network with two or more component is Inf!).
+
+```{r}
+giant <- decompose(g)[[1]]
+```
+
+Components can be __weakly connected__ (in undirected networks) or __strongly connected (in directed networks, where there is an edge that ends in every single node of that component).
+
+Even within a giant component, there can be different subsets of the network that are more connected to each other than to the rest of the network. The goal of __community detection algorithms__ is to identify these subsets.
+
+There are a few different algorithms, each following a different logic. 
+
+The __walktrap__ algorithm finds communities through a series of short random walks. The idea is that these random walks tend to stay within the same community. The length of these random walks is 4 edges by default, but you may want to experiment with different values. The goal of this algorithm is to identify the partition that maximizes a modularity score.
+
+```{r}
+cluster_walktrap(giant)
+cluster_walktrap(giant, steps=10)
+```
+
+Other methods are:
+
+- The __fast and greedy__ method tries to directly optimize this modularity score.
+- The __infomap__ method attempts to map the flow of information in a network, and the different clusters in which information may get remain for longer periods. Similar to walktrap, but not necessarily maximizing modularity, but rather the so-called "map equation".
+- The __edge-betweenness__ method iteratively removes edges with high betweenness, with the idea that they are likely to connect different parts of the network. Here betweenness (gatekeeping potential) applies to edges, but the intuition is the same.
+- The __label propagation__ method labels each node with unique labels, and then updates these labels by choosing the label assigned to the majority of their neighbors, and repeat this iteratively until each node has the most common labels among its neighbors.
+
+```{r}
+cluster_edge_betweenness(giant)
+cluster_infomap(giant)
+cluster_label_prop(giant)
+```
+
+Infomap tends to work better in most social science examples (websites, social media, classrooms, etc), but fastgreedy is faster.
+
+`igraph` also makes it very easy to plot the resulting communities:
+```{r, eval = FALSE}
+# undirected graphs only
+comm <- cluster_infomap(giant)
+modularity(comm) # modularity score
+par(mar=c(0,0,0,0)); plot(comm, giant)
+```
+
+Alternatively, we can also add the membership to different communities as a color parameter in the `igraph` object.
+```{r, eval = FALSE}
+# for undirected graphs
+V(giant)$color <- membership(comm)
+par(mar=c(0,0,0,0)); plot(giant)
+```
+
+The final way in which we can think about network communities is in terms of hierarchy or structure. We'll discuss one of these methods.
+
+__K-core decomposition__ allows us to identify the core and the periphery of the network. A k-core is a maximal subnet of a network such that all nodes have at least degree K.
+
+```{r, figh.width=6, fig.height=7}
+coreness(g)  %>% head() %>% kable()
+which(coreness(g)==6) # what is the core of the network?
+which(coreness(g)==1)  %>% head() %>% kable() # what is the periphery of the network?
+
+# Visualizing network structure
+V(g)$coreness <- coreness(g)
+par(mfrow=c(3, 2), mar=c(0.1,0,1,15)) # mai = c(0, 0, 0, 0),
+set.seed(777); fr <- layout_with_fr(g)
+for (k in 1:6){
+  V(g)$color <- ifelse(V(g)$coreness>=k, "orange", "grey")
+  plot(g, main=paste0(k, '-core shell'), layout=fr, margin=0)
+}
+```
+
+```{r igraph-cluster-walktrap, figh.width=6, fig.height=6}
+wc <- cluster_walktrap(g)
+modularity(wc)
+membership(wc) %>% head() %>% kable()
+V(g)$shortname<-V(g)$name #shortened easier to read ver name
+V(g)$shortname[V(g)$shortname==
+                 "concentration of likely donors 
+               in map-drawing party's districts"] <- "donor concentration"
+V(g)$shortname[V(g)$shortname==
+                 "individual legislator voting"] <- "legislator voting"
+V(g)$shortname[V(g)$shortname==
+                 "effect of personal vote"] <- "personal vote"
+V(g)$shortname[V(g)$shortname==
+                 "detect gerrymandering"] <- "detect gerrymander"
+V(g)$shortname[V(g)$shortname==
+                 "proportional minority representation"] <- "prop. minority rep"
+V(g)$shortname[V(g)$shortname==
+                 "Number of competitive districts"] <- "no. competitive district"
+V(g)$shortname[V(g)$shortname==
+                 "legislator information about district"] <- "legis. info on district"
+V(g)$shortname[V(g)$shortname==
+                 "floor votes align with 
+               district preferences"] <- "legis. votes with district pref."
+V(g)$shortname[V(g)$shortname==
+                 "stability in voters' fellow constituents"] <- "constituent stability"
+V(g)$shortname[V(g)$shortname==
+                 "voter information about their district"] <- "voter info on district"
+V(g)$shortname[V(g)$shortname==
+                 "legislator information seeking"] <- "legis. info-seek"
+V(g)$shortname[V(g)$shortname==
+                 "Alignment of floor vote breakdown 
+               with statewide majority of voters"] <- "Floor vote align state voters"
+V(g)$shortname[V(g)$shortname==
+                 "number of competitive districts" ] <- "no. competitive district" 
+V(g)$shortname[V(g)$shortname==
+                 "House-Senate Delegation alignment" ] <- "Congress-SH align" 
+V(g)$shortname[V(g)$shortname==
+                 "unconstitutional government interest"] <- "unconstit gov interest"
+V(g)$shortname[V(g)$shortname==
+                 "number of minority representatives"] <- "no. minority reps"
+V(g)$shortname[V(g)$shortname==
+                 "representation of majority opinion"] <- "represent majority opinion"
+V(g)$shortname[V(g)$shortname==
+                 "elite ideological moderation"] <- "elite ideol moderation"
+V(g)$shortname[V(g)$shortname==
+                 "partisan gerrymandering"] <- "partisan gerrymander"
+V(g)$shortname[V(g)$shortname==
+                 "legislative majority-
+               seeking behavior"] <- "legis majority-seeking behavior"
+V(g)$shortname[V(g)$shortname==
+                 "change in constituency boundaries"] <- "change constituent boundary"
+V(g)$shortname[V(g)$shortname==
+                 "demographic and ideological sorting"]<- "demog/ideol sorting"
+V(g)$shortname[V(g)$shortname==
+                 "dispersed minority population"]<- "dispersed minority pop"
+V(g)$shortname[V(g)$shortname==
+                 "majority minority districts"]<- "majority minority district"
+
+set.seed(123)
+pdf(file=here::here("figs","redistrict_communities.pdf"),width=13,height=13)
+plot(g)
+plot(wc, g, vertex.label=V(g)$shortname,vertex.label.dist=1,vertex.color="gray20")
+dev.off()
+par(mar=c(1,0,1,8))
+plot(g)
+```
+
