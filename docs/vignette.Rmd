@@ -2,8 +2,9 @@
 title: "netlit  Vignette"
 author: "Devin Judge-Lord, Adeline Lo & Kyler Hudson"
 subtitle: Redistricting Literature
-output: rmarkdown::html_vignette
-#output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r, message=FALSE, warning=FALSE}
@@ -65,10 +66,15 @@ In the example below, we use example data from [this project on redistricting](h
 
 ```{r literature}
 library(netlit)
+library(tidyverse)
 
 data("literature")
 
-literature %>% kable()
+lit_table <- literature %>%
+  select(-cites_empirical) %>% 
+  kable()
+
+lit_table
 ```
 
 ---
@@ -167,6 +173,15 @@ literature %<>% mutate(communities_node = str_c(to, from) %>% str_detect("Commun
               empirical = ifelse(!is.na(cites_empirical),
                                  "Empirical work", 
                                  "No empirical work"))
+
+literature %<>%
+  rowwise %>% 
+  mutate(combined_cites = str_remove_all(string = str_c(na.omit(cites, cites_empirical)), 
+                                         pattern = "et al.|,"),
+         all_years = str_extract_all(combined_cites, "\\(?[0-9,.]+\\)?")[1],
+         earliest_year = min(all_years)) #%>% 
+  #filter(earliest_year < 2015) #uncomment to get early network
+
 ```
 
 Now we use `review()` on this expanded edgelist, including all variables in the `literature` data with `edge_attributes = names(literature)`.
@@ -272,6 +287,7 @@ p
 p + facet_wrap("communities_node")
 
 p + facet_wrap("confound")
+
 ```
 
 
@@ -490,8 +506,8 @@ data("literature_metadata")
 literature_metadata %>% kable()
 
 # count publications per journal
-pub_table <- literature_metadata %>% 
-  filter(str_detect(paste(literature$cites, collapse = "|"), Author)) %>% 
+pub_table <- literature_metadata %>%
+  filter(str_detect(paste(literature$cites, collapse = "|"), Author)) %>%
   count(Publication, name = "Articles") %>%
   mutate(Publication = case_when(
     Publication == "AJPS" ~ "American Journal of Political Science",
@@ -501,22 +517,22 @@ pub_table <- literature_metadata %>%
     Publication == "NCL Review" ~ "North Carolina Law Review",
     Publication == "QJPS" ~ "Quarterly Journal of Political Science",
     TRUE ~ Publication
-  )) 
+  ))
 
 pub_table %>% kable()
 
 # save list of journals as .tex table to include in a paper
-pub_table %>% 
-  kable() %>% 
+pub_table %>%
+  kable(booktabs = T, format = "latex") %>%
   save_kable(file = "tables/pub_table.tex")
 
 data("literature")
 
 # save example concepts as .tex table to include in a paper
 literature %>%
-  select(-cites_empirical) %>% 
-  head() %>% 
-  kable() %>% 
+  select(-cites_empirical) %>%
+  head() %>%
+  kable(booktabs = T, format = "latex") %>%
   save_kable(file = "tables/literature_example.tex")
 ```
 
