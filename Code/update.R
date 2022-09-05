@@ -10,11 +10,15 @@ library(magrittr)
 # refresh data from google sheet if token is present
 if(gs4_has_token()){
   
+  
+  # Redistricing 
   dag <- googledrive::drive_get("redistricting vars") %>%
     gs4_get() %>% 
     read_sheet("DAG_edgelist") 
   1
   1
+  
+  # Correspondence: https://docs.google.com/spreadsheets/d/1LACTrfsXGX2J7JlFgnF3bniUQpsMtKBVSQSYo0KPmkc/edit?usp=sharing
   
   write_csv(dag, here("Data",  "dag.csv"))
   
@@ -23,14 +27,20 @@ if(gs4_has_token()){
            from = str_to_lower(from)) %>% 
     as.data.frame()
   
-  write_csv(literature, here("Data",  "literature.csv"))
   
   # trim down for package example 
   literature %<>% 
-    select(to, from, cites, cites_empirical) 
+    select(to, edge, from, cites, cites_empirical) %>% 
+    #FIXME in sheet 
+    mutate(edge = edge %>% str_extract("increase|decrease") %>% replace_na("other") %>% str_to_title())
+  
+  write_csv(literature, here("Data",  "literature.csv"))
   
   literature %>% 
-    save(file =  here::here("data", "literature.rda") )
+    save(file =  here::here("Data", "literature.rda") )
+  
+  literature %>% 
+    save(file =  here::here("Data", "literature.rdata") )
   
   node_attributes <-  googledrive::drive_get("redistricting vars") %>%
     gs4_get() %>% 
