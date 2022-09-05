@@ -1,0 +1,434 @@
+---
+title: "Simulating Biased Literature Reviews with `netlit`"
+author: "Devin Judge-Lord, Adeline Lo & Kyler Hudson"
+subtitle: Redistricting Literature
+output:
+    # pdf_document:
+    #   toc: true
+    #   keep_tex: true
+    html_document:
+      highlight: zenburn
+      toc: true
+      toc_float: true
+      code_folding: hide
+---
+
+```{r, message=FALSE, warning=FALSE}
+library(knitr)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      cache = FALSE,
+                      fig.width=10, 
+                      fig.height=7,
+                      fig.show="hold", 
+                      out.width = "100%",
+                      #split = T,
+                      fig.align = 'center', 
+                      fig.path='../figs/',
+                      fig.cap= "",
+                      out.extra = "",
+                      fig.retina = 3, 
+                      warning=FALSE, 
+                      message=FALSE)
+
+library(kableExtra) # Table formatting
+
+# format kable for document type 
+kable <- function(...){
+  if(knitr::is_latex_output()){
+    head(..., 25) %>% 
+    knitr::kable(booktabs = T, format = 'latex') %>% 
+  kable_styling(latex_options = c("striped", "scale_down", "HOLD_position"))
+    } else {
+    knitr::kable(...) %>% 
+  kable_styling() %>% 
+  scroll_box(height = "400px")
+    }
+}
+```
+
+
+# Metadata 
+
+## Including Author Gender, H-Index, and Citation
+
+```{r literature}
+library(netlit)
+library(tidyverse)
+library(magrittr)
+
+# Load main data and metadata on citations
+#FIXME data() WILL WORK WHEN NETLIT"S literature_metadata IS UPDATED 
+# data("literature_metadata")
+# load("data/literature.rda")
+load("data/literature_metadata.rda")
+# data("literature")
+load("data/literature.rda")
+#FIXME end
+
+names(literature_metadata) %<>% janitor::make_clean_names()
+
+literature_metadata %<>% 
+  rename(author_gender = author_sex)
+
+literature_metadata%>% kable()
+
+# split out multiple cites per edge 
+literature_long <- literature %>% 
+  mutate(id = str_split(cites, ";")) %>% 
+  unnest(id)
+
+# merge edgelist with metadata
+literature_long %<>% full_join(literature_metadata)
+```
+
+```{r bias-hist, fig.width=3.5, fig.height=2, out.width="50%", fig.show='hold'}
+literature_long %>% 
+  ggplot() +
+  aes(x = author_h_index, fill = author_gender)+
+  geom_histogram()
+
+literature_long %>% 
+  ggplot() +
+  aes(x = author_citations, fill = author_gender)+
+  geom_histogram()
+```
+
+---
+
+## Missing metadata 
+```{r}
+literature_metadata %>%
+  filter(is.na(author_gender) | is.na(author_h_index)| is.na(author_citations)) %>% 
+  kable()
+```
+
+
+```{r libraries, message=FALSE, warning=FALSE}
+library(ggraph)
+```
+
+```{r include=FALSE}
+clean <- . %>% 
+  str_replace_all("([a-z| |-]{8}) ","\\1\n") %>%
+  str_replace_all(" ([a-z| |-]{9})",  "\n\\1") %>% str_to_title() %>% 
+  str_replace("\nOf\n", "\nOf ") %>% 
+  str_replace("\nFellow ", " Fellow\n") %>% 
+  str_replace("\nState\n", " State\n") %>% 
+  str_replace("\nDistrict\n", " District\n") %>% 
+  str_replace("\nWith\n", " With\n")
+
+literature_long$from %<>% clean() 
+literature_long$to %<>% clean()
+```
+
+---
+
+
+## The Full Graph
+
+```{r ggraph, cache= FALSE}
+literature_long %>% 
+  distinct(to, from) %>% 
+  review()
+
+# best seed 1,4, *5*
+set.seed(5)
+
+netlit_plot <- function(g){
+ggraph(g, layout = 'fr') + 
+  geom_node_point(
+    aes(color = degree_total %>% as.factor() ),
+    size = 6, 
+    alpha = .7
+    ) + 
+  geom_edge_arc2(
+    aes(
+      start_cap = circle(3, 'mm'),
+      end_cap = circle(6, 'mm'),
+      color = edge_betweenness,
+      ),
+    curvature = 0,
+    arrow = arrow(length = unit(2, 'mm'), 
+                  type = "open")
+    ) +
+  geom_edge_loop(
+      aes( color = edge_betweenness,
+      start_cap = circle(5, 'mm'),
+      end_cap = circle(2, 'mm'),
+      ),
+      n = 300,
+      strength = .6,
+    arrow = arrow(length = unit(2, 'mm'), 
+                  type = "open")
+    ) +
+  geom_node_text( aes(label = name), size = 2.3) + 
+  ggplot2::theme_void() + 
+  theme(legend.position="bottom") + 
+  labs(edge_color = "Edge Betweenness",
+       color = "Total Degree\nCentrality",
+       edge_linetype = "") + 
+scale_edge_color_viridis(discrete = FALSE,
+                         option = "plasma", 
+                         begin = 0, 
+                         end = .9, 
+                         direction = -1) +
+  scale_color_viridis_d(option = "mako", 
+                        begin = 1, 
+                        end = .5)
+}
+
+
+literature_long %>% 
+  distinct(to, from) %>% 
+  review()  %>% 
+  .$graph %>% 
+  netlit_plot()
+```
+
+---
+
+## Men only
+
+- 69 edges to 61 edges
+- 56 nodes to 52 nodes
+
+
+```{r}
+literature_long %<>%
+  mutate(author_is_man = author_gender == "M")
+
+literature_long %>% 
+  filter(author_is_man) %>% 
+  distinct(to, from) %>% 
+  review()
+
+literature_long %>% 
+  filter(author_is_man) %>% 
+  distinct(to, from) %>% 
+  review()  %>% 
+  .$graph %>% 
+  netlit_plot()
+```
+
+---
+
+## Authors with H-Index over 20
+
+- 69 edges to 56 edges
+- 56 nodes to 49 nodes
+
+
+```{r}
+literature_long %>% 
+  filter(author_h_index >2) %>% 
+  distinct(to, from) %>% 
+  review()
+
+literature_long %>% 
+  filter(author_h_index >2) %>% 
+  distinct(to, from) %>% 
+  review()  %>% 
+  .$graph %>% 
+  netlit_plot()
+```
+
+---
+
+## Authors with over 1000 Citations
+
+- 69 edges to 26 edges
+- 56 nodes to 32 nodes
+
+
+```{r, }
+literature_long %>% 
+  filter(author_citations > 1000) %>% 
+  distinct(to, from) %>% 
+  review()
+
+literature_long %>% 
+  filter(author_citations > 1000) %>% 
+  distinct(to, from) %>% 
+  review()  %>% 
+  .$graph %>% 
+  netlit_plot()
+```
+
+---
+
+# Biased Samples
+
+```{r}
+# biased sample weights 
+literature_long %<>% 
+    mutate(unbiased = .5,
+           weight = case_when(
+      author_is_man ~ .6,
+      !author_is_man ~ .4,
+      TRUE~ .5 
+    ))
+
+
+# a function to sample the network 
+sample_lit <- function(n, literature_long, prob){
+  
+  # create index for sample
+  samp_idx <- sample(seq_len(nrow(literature_long)), 
+                     100, # 100 draws = number of studies to draw 
+                     prob=prob # with prob var provided 
+                     )
+  
+  # subset sample to index 
+  sample <- literature_long %>% 
+    rowid_to_column() %>% 
+    filter(rowid %in% samp_idx) %>% 
+    distinct(to, from) %>% 
+    review()
+  
+    return(sample)
+}
+
+# TEST 
+# random_samples <- sample_lit(literature_long, prob =  literature_long$unbiased)
+# gender_samples <- sample_lit(literature_long, prob = literature_long$weight)
+```
+
+---
+
+## Random draws of 100 studies
+
+```{r draw-random, out.width= "10%", cache=TRUE}
+random_samples <- map(1:100, # 100 samples 
+                      sample_lit,
+                      literature_long=literature_long, 
+                      prob = literature_long$unbiased)
+
+# make table of total number of nodes, edges and the graph object for plotting
+random <- tibble(
+  nodes = random_samples %>% map(1) %>% modify(nrow) %>% unlist(),
+  edges = random_samples %>% map(2) %>% modify(nrow) %>% unlist(),
+  graph = random_samples %>% map(3),
+  sample = "Random"
+)
+
+# map(random$graph, netlit_plot)
+```
+
+
+Average nodes recovered: `r random$nodes %>% mean() `
+
+Average edges recovered: `r random$edges %>% mean() `
+
+---
+
+## Gender-biased draws 
+
+```{r draw-gender-bias, out.width= "10%", cache=TRUE}
+# gender biased samples
+gender_samples <- map(1:100, sample_lit,literature_long=literature_long, prob = literature_long$weight)
+
+gender <- tibble(
+  nodes = gender_samples %>% map(1) %>% modify(nrow) %>% unlist(),
+  edges = gender_samples %>% map(2) %>% modify(nrow) %>% unlist(),
+  graph = gender_samples %>% map(3),
+  sample = "Gender bias"
+)
+  
+#map(gender$graph, netlit_plot)
+```
+
+Average nodes recovered: `r gender$nodes %>% mean() `
+
+Average edges recovered: `r gender$edges %>% mean() `
+
+
+---
+
+## H-Index-biased draws
+
+(replacing NA HIndex with 0) 
+
+```{r draw-hindex-bias, out.width= "10%", cache=TRUE}
+literature_long %<>%
+  mutate(author_h_index = replace_na(author_h_index, 0 ))
+
+# gender biased samples
+hindex_samples <- map(1:100, sample_lit,literature_long=literature_long, prob = literature_long$author_h_index)
+
+hindex <- tibble(
+  nodes = hindex_samples %>% map(1) %>% modify(nrow) %>% unlist(),
+  edges = hindex_samples %>% map(2) %>% modify(nrow) %>% unlist(),
+  graph = hindex_samples %>% map(3),
+  sample = "H-Index bias"
+)
+  
+#map(gender$graph, netlit_plot)
+```
+
+Average nodes recovered: `r hindex$nodes %>% mean() `
+
+Average edges recovered: `r hindex$edges %>% mean() `
+
+---
+
+## Citation-biased draws
+
+```{r draw-citation-bias, out.width= "20%", cache=TRUE, fig.show="hide"}
+literature_long %<>%
+  mutate(author_citations = replace_na(author_citations, 0 ))
+
+# gender biased samples
+citations_samples <- map(1:100, sample_lit,literature_long=literature_long, prob = literature_long$author_citations)
+
+citations <- tibble(
+  nodes = citations_samples %>% map(1) %>% modify(nrow) %>% unlist(),
+  edges = citations_samples %>% map(2) %>% modify(nrow) %>% unlist(),
+  graph = citations_samples %>% map(3),
+  sample = "Citations bias"
+)
+  
+# map(citations$graph, netlit_plot)
+```
+
+Average nodes recovered: `r citations$nodes %>% mean() `
+
+Average edges recovered: `r citations$edges %>% mean() `
+
+
+# Comparing biases
+
+```{r biases, fig.width=3.5, fig.height=2, out.width="49%", fig.show="hold"}
+s <- full_join(random, gender) %>% 
+  full_join(hindex) %>% 
+  full_join(citations)
+
+s %>% 
+  ggplot() + 
+  aes(x = nodes, fill = sample, color = sample) +
+  geom_density(alpha = .5) + 
+  scale_color_viridis_d() + 
+  scale_fill_viridis_d() +
+  theme_minimal() + 
+  labs(color = "", 
+       fill = "") + 
+  theme(axis.text.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank())
+
+s %>% 
+  ggplot() + 
+  aes(x = edges, fill = sample, color = sample) +
+  geom_density(alpha = .5) + 
+  scale_color_viridis_d() + 
+  scale_fill_viridis_d() +
+  theme_minimal() + 
+  labs(color = "", 
+       fill = "") + 
+  theme(axis.text.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank())
+  
+```
