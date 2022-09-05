@@ -35,7 +35,7 @@ kable <- function(...){
     } else {
     knitr::kable(...) %>% 
   kable_styling() %>% 
-  scroll_box(height = "200px")
+  scroll_box(height = "300px")
     }
 }
 ```
@@ -67,8 +67,11 @@ In the example below, we use example data from [this project on redistricting](h
 ```{r literature}
 library(netlit)
 library(tidyverse)
+library(magrittr)
 
-data("literature")
+# data("literature")
+#FIXME data() WILL WORK WHEN NETLIT"S literature_metadata IS UPDATED 
+literature <- read_csv("data/literature.csv")
 
 lit_table <- literature %>%
   select(-cites_empirical) %>% 
@@ -114,7 +117,7 @@ data("node_attributes")
 node_attributes %>%  kable()
 
 lit <- review(literature,
-              edge_attributes = c("cites", "cites_empirical"),
+              edge_attributes = c("cites", "cites_empirical", "edge"),
               node_attributes = node_attributes)
 
 lit
@@ -130,8 +133,6 @@ Tip: to retain all variables from `literature`, use `edge_attributes = names(lit
 ### A Larger Edgelist and Nodelist --> 
 
 ```{r libraries, message=FALSE, warning=FALSE}
-library(tidyverse)
-library(magrittr)
 library(ggraph)
 ```
 
@@ -229,7 +230,6 @@ We can also plot using the package `ggraph` package to plot the `igraph` object.
 This package allows us to plot self-ties, but it is slightly more difficult to use ggplot features (e.g. colors and legend labels) compared to `ggnetwork`.
 
 ```{r ggraph, cache= FALSE}
-# best seed 1,4, *5*
 set.seed(5)
 
 p <- ggraph(g, layout = 'fr') + 
@@ -283,7 +283,7 @@ p
 
 #### Subgraphs
 
-```{r ggraph-subset,fig.width=20, cache=FALSE, fig.retina=8}
+```{r ggraph-subset,fig.width=20, cache=FALSE, fig.retina=5}
 p + facet_wrap("communities_node")
 
 p + facet_wrap("confound")
@@ -296,6 +296,8 @@ p + facet_wrap("confound")
 Edge Betweenness
 
 ```{r ggraph-edge-betweenness}
+set.seed(5)
+
 ggraph(g, layout = 'fr') + 
   geom_node_point(size = 10, 
                   alpha = .1) + 
@@ -330,6 +332,8 @@ scale_edge_color_viridis(begin = 0.2,
 
 Node Betweenness
 ```{r ggraph-betweenness}
+set.seed(5)
+
 
 p <- ggraph(g, layout = 'fr') + 
   geom_node_point(
@@ -411,6 +415,8 @@ scale_edge_color_viridis(begin = 0.2,
 <!--### Coreness --> 
 
 ```{r ggraph-coreness, eval=FALSE, include=FALSE}
+set.seed(5)
+
 #TODO
 p <- ggraph(g, layout = 'fr') + 
   geom_node_point(
@@ -460,7 +466,10 @@ p
 
 ### Degree
 
-```{r ggraph-degree-total, fig.retina=8}
+```{r ggraph-degree-total, fig.retina=5}
+set.seed(5)
+
+
 ggraph(g, layout = 'fr') + 
   geom_node_point(aes(color = degree_total),
                   size = 10, 
@@ -493,6 +502,59 @@ scale_edge_color_viridis(begin = 0.2,
 
 
 ---
+
+### Causal Direction
+
+```{r ggraph-dag}
+set.seed(5)
+
+p <- ggraph(g, layout = 'fr') + 
+  geom_node_point(
+    aes(color = degree_total %>% as.factor() ),
+    size = 6, 
+    alpha = .7
+    ) + 
+  geom_edge_arc2(
+    aes(
+      start_cap = circle(3, 'mm'),
+      end_cap = circle(6, 'mm'),
+      color = edge,
+      linetype = empirical
+      ),
+    curvature = 0,
+    arrow = arrow(length = unit(2, 'mm'), 
+                  type = "open")
+    ) +
+  geom_edge_loop(
+      aes( color = edge,
+      start_cap = circle(5, 'mm'),
+      end_cap = circle(2, 'mm'),
+      linetype = empirical
+      ),
+      n = 300,
+      strength = .6,
+    arrow = arrow(length = unit(2, 'mm'), 
+                  type = "open")
+    ) +
+  geom_node_text( aes(label = name), size = 2.3) + 
+  ggplot2::theme_void() + 
+  theme(legend.position="bottom", #legend.direction = "vertical"
+        ) + 
+  labs(edge_color = "Causal\nEffect",
+       color = "Total Degree\nCentrality",
+       edge_linetype = "") + 
+scale_edge_color_manual(values = c("red", "dark green", "grey"))  +    
+  scale_color_viridis_d(option = "mako", 
+                        begin = 1, 
+                        end = .5) 
+
+p 
+```
+
+
+
+---
+
 
 
 # About the example data
