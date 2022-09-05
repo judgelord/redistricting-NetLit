@@ -13,23 +13,27 @@ output:
       code_folding: hide
 ---
 
-```{r, message=FALSE, warning=FALSE}
-library(knitr)
-```
+This vignette shows examples of assessing bias in literature review networks based on covariates from metadata about the studies and authors included or excluded from the review. Specifically, for each study, we collect metadata on the lead author's gender, H-Index, and total number of citations. We then assess the impact of selecting studies on covariates in two ways: 
 
-```{r setup, include=FALSE}
+1. First, we subset the network (e.g., to studies where the lead author is a man) and observe how many nodes and edges are missing in these subsets. This reveals the contributions of underrepresented scholars to the network by showing what we lose if they are excluded.
+
+2. Second, we draw random samples of 100 studies weighted by covariates. This simulates a literature review that is biased (e.g., toward scholars who are men or have many citations). We then compare these biased samples to an unweighted random sample of studies in the network. 
+
+```{r setup, include=FALSE,  message=FALSE, warning=FALSE}
+library(knitr)
+
 knitr::opts_chunk$set(echo = TRUE, 
-                      cache = FALSE,
+                      #cache = FALSE,
                       fig.width=10, 
                       fig.height=7,
                       fig.show="hold", 
                       out.width = "100%",
                       #split = T,
-                      fig.align = 'center', 
+                       fig.align = "default",
                       fig.path='../figs/',
                       fig.cap= "",
                       out.extra = "",
-                      fig.retina = 3, 
+                      fig.retina = 1, 
                       warning=FALSE, 
                       message=FALSE)
 
@@ -52,7 +56,7 @@ kable <- function(...){
 
 # Metadata 
 
-## Including Author Gender, H-Index, and Citation
+## Lead Author Gender, H-Index, and Citation
 
 ```{r literature}
 library(netlit)
@@ -84,7 +88,7 @@ literature_long <- literature %>%
 literature_long %<>% full_join(literature_metadata)
 ```
 
-```{r bias-hist, fig.width=3.5, fig.height=2, out.width="50%", fig.show='hold'}
+```{r bias-hist, fig.width=3.5, fig.height=2, out.width="50%", fig.show='hold', fig.retina=2}
 literature_long %>% 
   ggplot() +
   aes(x = author_h_index, fill = author_gender)+
@@ -211,7 +215,8 @@ lit %<>%
 #  missing nodes 
   missing_nodes <- lit$nodelist$node[!lit$nodelist$node %in% subgraph$nodelist$node]
 
-  
+  set.seed(5)
+
 ggraph(lit$g, layout = 'fr') + 
   geom_node_point(
     aes(color = ifelse(name %in% missing_nodes, "Missing", "Not Missing")),
@@ -262,7 +267,7 @@ ggraph(lit$g, layout = 'fr') +
 - 56 nodes reduced to 52 nodes
 
 
-```{r}
+```{r men-only, fig.retina=2}
 literature_long %<>%
   mutate(author_is_man = author_gender == "M")
 
@@ -281,7 +286,6 @@ netlit_bias_plot(bro_lit)
 missing_nodes <- lit$nodelist$node[!lit$nodelist$node %in% bro_lit$nodelist$node]
 missing_from <- lit$edgelist$from[!lit$edgelist$from %in% bro_lit$edgelist$from]
 missing_to <- lit$edgelist$to[!lit$edgelist$to %in% bro_lit$edgelist$to]
-missing_edges <- c(missing_from, missing_to)
 ```
 
 Nodes missing: `r missing_nodes`
@@ -294,7 +298,7 @@ Nodes missing: `r missing_nodes`
 - 56 nodes reduced to 49 nodes
 
 
-```{r}
+```{r hindex-over-20, fig.retina=2}
 lit_sr <- literature_long %>% 
   filter(author_h_index >2) %>% 
   distinct(to, from) %>% 
@@ -317,7 +321,7 @@ Nodes missing: `r lit$nodelist$node[!lit$nodelist$node %in% lit_sr$nodelist$node
 - 56 nodes reduced to 32 nodes
 
 
-```{r, }
+```{r author-cites-over-1000, fig.retina=2}
 lit_sr_cites <- literature_long %>% 
   filter(author_citations > 1000) %>% 
   distinct(to, from) %>% 
@@ -350,7 +354,7 @@ literature_long %<>%
 # a function to sample the network 
 sample_lit <- function(n, literature_long, prob){
   
-  # create index for sample
+  # create an index for the sample
   samp_idx <- sample(seq_len(nrow(literature_long)), 
                      100, # 100 draws = number of studies to draw 
                      prob=prob # with prob var provided 
@@ -377,13 +381,13 @@ sample_lit <- function(n, literature_long, prob){
 
 There are 165 studies in the original literature review.
 
-```{r draw-random, out.width= "10%", cache=TRUE}
+```{r draw-random, out.width= "20%", cache=TRUE, results='hide'}
 random_samples <- map(1:1000, # 100 samples 
                       sample_lit,
                       literature_long=literature_long, 
                       prob = literature_long$unbiased)
 
-# make table of total number of nodes, edges and the graph object for plotting
+# make a table of the total number of nodes, edges, and the graph object for plotting
 random <- tibble(
   nodes = random_samples %>% map(1) %>% modify(nrow) %>% unlist(),
   edges = random_samples %>% map(2) %>% modify(nrow) %>% unlist(),
@@ -392,6 +396,7 @@ random <- tibble(
 )
 
 # map(random$graph, netlit_plot)
+map(random_samples[1:10], netlit_bias_plot) 
 ```
 
 
@@ -405,7 +410,7 @@ Average edges recovered: `r random$edges %>% mean() `
 
 ### pr(cite|man) = .60, pr(cite|woman) = .40
 
-```{r draw-gender-bias, out.width= "10%", cache=TRUE}
+```{r draw-gender-bias, out.width= "20%", cache=TRUE, results='hide'}
 #  biased samples
 gender_samples <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$weight)
 
@@ -417,6 +422,7 @@ gender <- tibble(
 )
   
 # map(gender_samples[1:10], netlit_bias_plot)
+map(gender_samples[1:10], netlit_bias_plot)
 ```
 
 Average nodes recovered: `r gender$nodes %>% mean() `
@@ -428,7 +434,7 @@ Average edges recovered: `r gender$edges %>% mean() `
 
 ### pr(man) = 1, pr(woman) = .30
 
-```{r draw-gender-bias-extreme, out.width= "10%", cache=TRUE}
+```{r draw-gender-bias-men, out.width= "20%", cache=TRUE, results='hide'}
 # biased sample weights 
 literature_long %<>% 
     mutate(weight = case_when(
@@ -449,6 +455,7 @@ gender <- tibble(
 )
   
 #map(gender$graph, netlit_plot)
+map(gender_samples[1:10], netlit_bias_plot)
 ```
 
 Average nodes recovered: `r gender$nodes %>% mean() `
@@ -460,7 +467,7 @@ Average edges recovered: `r gender$edges %>% mean() `
 
 ### pr(man) = .30, pr(woman) = 1
 
-```{r draw-gender-affirm, out.width= "10%", cache=TRUE}
+```{r draw-gender-women, out.width= "20%", cache=TRUE, results='hide'}
 # biased sample weights 
 literature_long %<>% 
     mutate(weight = case_when(
@@ -481,6 +488,7 @@ gender2 <- tibble(
 )
   
 #map(gender$graph, netlit_plot)
+map(gender_samples2[1:10], netlit_bias_plot)
 ```
 
 Average nodes recovered: `r gender2$nodes %>% mean() `
@@ -494,7 +502,7 @@ Average edges recovered: `r gender2$edges %>% mean() `
 
 (replacing NA HIndex with 0) 
 
-```{r draw-hindex-bias, out.width= "10%", cache=TRUE}
+```{r draw-hindex-bias, out.width= "20%", cache=TRUE, results='hide'}
 literature_long %<>%
   mutate(author_h_index = replace_na(author_h_index, 0 ))
 
@@ -509,6 +517,7 @@ hindex <- tibble(
 )
   
 #map(gender$graph, netlit_plot)
+map(hindex_samples[1:10], netlit_bias_plot)
 ```
 
 Average nodes recovered: `r hindex$nodes %>% mean() `
@@ -521,11 +530,11 @@ Average edges recovered: `r hindex$edges %>% mean() `
 
 (replacing NA author citations with 0) 
 
-```{r draw-citation-bias, out.width= "20%", cache=TRUE, fig.show="hide"}
+```{r draw-citation-bias, out.width= "20%", cache=TRUE, results='hide'}
 literature_long %<>%
   mutate(author_citations = replace_na(author_citations, 0 ))
 
-# gender biased samples
+# gender-biased samples
 citations_samples <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$author_citations)
 
 citations <- tibble(
@@ -536,6 +545,7 @@ citations <- tibble(
 )
   
 # map(citations$graph, netlit_plot)
+map(citations_samples[1:10], netlit_bias_plot) # %>% .[c(1:10)]
 ```
 
 Average nodes recovered: `r citations$nodes %>% mean() `
@@ -543,9 +553,9 @@ Average nodes recovered: `r citations$nodes %>% mean() `
 Average edges recovered: `r citations$edges %>% mean() `
 
 
-# Comparing biases
+# Comparing Biases
 
-```{r biases, fig.width=4.5, fig.height=2, out.width="100%", fig.show="hold"}
+```{r biases, fig.width=4.5, fig.height=2, out.width="100%", fig.show="hold", fig.retina=2}
 s <- full_join(random, gender) %>% 
   full_join(gender2) %>% 
   full_join(hindex) %>% 
