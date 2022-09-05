@@ -6,7 +6,7 @@ output:
     # pdf_document:
     #   toc: true
     #   keep_tex: true
-    html_document:
+    bookdown::html_document2:
       highlight: zenburn
       toc: true
       toc_float: true
@@ -129,7 +129,7 @@ literature_long$to %<>% clean()
 
 ## The Full Graph
 
-```{r ggraph, cache= FALSE}
+```{r}
 lit <- literature_long %>% 
   distinct(to, from) %>% 
   review()
@@ -183,19 +183,83 @@ scale_edge_color_viridis(discrete = FALSE,
 }
 
 
-literature_long %>% 
+g <- literature_long %>% 
   distinct(to, from) %>% 
   review()  %>% 
-  .$graph %>% 
+  .$graph 
+
+g %>% 
   netlit_plot()
 ```
 
 ---
 
+```{r}
+# for plotting bias
+netlit_bias_plot <- function(subgraph){
+  
+  # lit with edge attribute indicating missing from subgraph 
+lit <- literature_long %>% 
+  distinct(to, from) %>% 
+    left_join( subgraph$edgelist %>% distinct(to, from) %>% mutate(missing_edges = "Not missing") 
+) %>% 
+    mutate(missing_edges = replace_na(missing_edges, "Missing")) 
+
+lit %<>% 
+  review(edge_attributes = names(lit))  
+  
+#  missing nodes 
+  missing_nodes <- lit$nodelist$node[!lit$nodelist$node %in% subgraph$nodelist$node]
+
+  
+ggraph(lit$g, layout = 'fr') + 
+  geom_node_point(
+    aes(color = ifelse(name %in% missing_nodes, "Missing", "Not Missing")),
+    size = 6, 
+    alpha = .7
+    ) + 
+  geom_edge_arc2(
+    aes(
+      start_cap = circle(3, 'mm'),
+      end_cap = circle(6, 'mm'),
+      color = missing_edges,
+      ),
+    curvature = 0,
+    arrow = arrow(length = unit(2, 'mm'), 
+                  type = "open")
+    ) +
+  geom_edge_loop(
+      aes( color = missing_edges,
+      start_cap = circle(5, 'mm'),
+      end_cap = circle(2, 'mm'),
+      ),
+      n = 300,
+      strength = .6,
+    arrow = arrow(length = unit(2, 'mm'), 
+                  type = "open")
+    ) +
+  geom_node_text( aes(label = name), size = 2.3) + 
+  ggplot2::theme_void() + 
+  theme(legend.position="bottom") + 
+  labs(edge_color = "",
+       color = "",
+       edge_linetype = "") + 
+  scale_color_viridis_d(option = "inferno", 
+                        begin = 1, 
+                        end = .5,
+                        direction = -1) + 
+ scale_edge_color_viridis(discrete = TRUE,
+                         option = "inferno", 
+                         begin = 1, 
+                         end = .5, 
+                         direction = -1) 
+}
+```
+
 ## Men only
 
-- 69 edges to 61 edges
-- 56 nodes to 52 nodes
+- 69 edges reduced to 61 edges
+- 56 nodes reduced to 52 nodes
 
 
 ```{r}
@@ -209,23 +273,25 @@ bro_lit <- literature_long %>%
 
 bro_lit
 
+set.seed(5)
 
-literature_long %>% 
-  filter(author_is_man) %>% 
-  distinct(to, from) %>% 
-  review()  %>% 
-  .$graph %>% 
-  netlit_plot()
+#netlit_plot(bro_lit$graph)
+netlit_bias_plot(bro_lit)
+
+missing_nodes <- lit$nodelist$node[!lit$nodelist$node %in% bro_lit$nodelist$node]
+missing_from <- lit$edgelist$from[!lit$edgelist$from %in% bro_lit$edgelist$from]
+missing_to <- lit$edgelist$to[!lit$edgelist$to %in% bro_lit$edgelist$to]
+missing_edges <- c(missing_from, missing_to)
 ```
 
-Nodes missing: `r lit$nodelist$node[!lit$nodelist$node %in% bro_lit$nodelist$node]`
+Nodes missing: `r missing_nodes`
 
 ---
 
 ## Authors with H-Index over 20
 
-- 69 edges to 56 edges
-- 56 nodes to 49 nodes
+- 69 edges reduced to 56 edges
+- 56 nodes reduced to 49 nodes
 
 
 ```{r}
@@ -236,12 +302,9 @@ lit_sr <- literature_long %>%
 
 lit_sr 
 
-literature_long %>% 
-  filter(author_h_index >2) %>% 
-  distinct(to, from) %>% 
-  review()  %>% 
-  .$graph %>% 
-  netlit_plot()
+set.seed(5)
+
+netlit_bias_plot(lit_sr)
 ```
 
 Nodes missing: `r lit$nodelist$node[!lit$nodelist$node %in% lit_sr$nodelist$node]`
@@ -250,8 +313,8 @@ Nodes missing: `r lit$nodelist$node[!lit$nodelist$node %in% lit_sr$nodelist$node
 
 ## Authors with over 1000 Citations
 
-- 69 edges to 26 edges
-- 56 nodes to 32 nodes
+- 69 edges reduced to 26 edges
+- 56 nodes reduced to 32 nodes
 
 
 ```{r, }
@@ -262,12 +325,9 @@ lit_sr_cites <- literature_long %>%
 
 lit_sr_cites
 
-literature_long %>% 
-  filter(author_citations > 1000) %>% 
-  distinct(to, from) %>% 
-  review()  %>% 
-  .$graph %>% 
-  netlit_plot()
+set.seed(5)
+
+netlit_bias_plot(lit_sr_cites)
 ```
 
 Nodes missing: `r lit$nodelist$node[!lit$nodelist$node %in% lit_sr_cites$nodelist$node]`
@@ -315,8 +375,10 @@ sample_lit <- function(n, literature_long, prob){
 
 ## Random draws of 100 studies
 
+There are 165 studies in the original literature review.
+
 ```{r draw-random, out.width= "10%", cache=TRUE}
-random_samples <- map(1:100, # 100 samples 
+random_samples <- map(1:1000, # 100 samples 
                       sample_lit,
                       literature_long=literature_long, 
                       prob = literature_long$unbiased)
@@ -344,8 +406,8 @@ Average edges recovered: `r random$edges %>% mean() `
 ### pr(cite|man) = .60, pr(cite|woman) = .40
 
 ```{r draw-gender-bias, out.width= "10%", cache=TRUE}
-# gender biased samples
-gender_samples <- map(1:100, sample_lit,literature_long=literature_long, prob = literature_long$weight)
+#  biased samples
+gender_samples <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$weight)
 
 gender <- tibble(
   nodes = gender_samples %>% map(1) %>% modify(nrow) %>% unlist(),
@@ -354,7 +416,7 @@ gender <- tibble(
   sample = "Gender bias favoring men"
 )
   
-#map(gender$graph, netlit_plot)
+# map(gender_samples[1:10], netlit_bias_plot)
 ```
 
 Average nodes recovered: `r gender$nodes %>% mean() `
@@ -364,7 +426,7 @@ Average edges recovered: `r gender$edges %>% mean() `
 
 ---
 
-### pr(man) = .100, pr(woman) = .30
+### pr(man) = 1, pr(woman) = .30
 
 ```{r draw-gender-bias-extreme, out.width= "10%", cache=TRUE}
 # biased sample weights 
@@ -376,8 +438,8 @@ literature_long %<>%
     ))
 
 
-# gender biased samples
-gender_samples <- map(1:100, sample_lit,literature_long=literature_long, prob = literature_long$weight)
+#  biased samples
+gender_samples <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$weight)
 
 gender <- tibble(
   nodes = gender_samples %>% map(1) %>% modify(nrow) %>% unlist(),
@@ -396,7 +458,7 @@ Average edges recovered: `r gender$edges %>% mean() `
 
 ---
 
-### pr(man) = .30, pr(woman) = .100
+### pr(man) = .30, pr(woman) = 1
 
 ```{r draw-gender-affirm, out.width= "10%", cache=TRUE}
 # biased sample weights 
@@ -408,22 +470,22 @@ literature_long %<>%
     ))
 
 
-# gender biased samples
-gender_samples2 <- map(1:100, sample_lit,literature_long=literature_long, prob = literature_long$weight)
+# biased samples
+gender_samples2 <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$weight)
 
 gender2 <- tibble(
-  nodes = gender_samples %>% map(1) %>% modify(nrow) %>% unlist(),
-  edges = gender_samples %>% map(2) %>% modify(nrow) %>% unlist(),
-  graph = gender_samples %>% map(3),
+  nodes = gender_samples2 %>% map(1) %>% modify(nrow) %>% unlist(),
+  edges = gender_samples2 %>% map(2) %>% modify(nrow) %>% unlist(),
+  graph = gender_samples2 %>% map(3),
   sample = "Gender bias favoring women"
 )
   
 #map(gender$graph, netlit_plot)
 ```
 
-Average nodes recovered: `r gender$nodes %>% mean() `
+Average nodes recovered: `r gender2$nodes %>% mean() `
 
-Average edges recovered: `r gender$edges %>% mean() `
+Average edges recovered: `r gender2$edges %>% mean() `
 
 
 ---
@@ -436,8 +498,8 @@ Average edges recovered: `r gender$edges %>% mean() `
 literature_long %<>%
   mutate(author_h_index = replace_na(author_h_index, 0 ))
 
-# gender biased samples
-hindex_samples <- map(1:100, sample_lit,literature_long=literature_long, prob = literature_long$author_h_index)
+#  biased samples
+hindex_samples <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$author_h_index)
 
 hindex <- tibble(
   nodes = hindex_samples %>% map(1) %>% modify(nrow) %>% unlist(),
@@ -457,12 +519,14 @@ Average edges recovered: `r hindex$edges %>% mean() `
 
 ## Citation-biased draws
 
+(replacing NA author citations with 0) 
+
 ```{r draw-citation-bias, out.width= "20%", cache=TRUE, fig.show="hide"}
 literature_long %<>%
   mutate(author_citations = replace_na(author_citations, 0 ))
 
 # gender biased samples
-citations_samples <- map(1:100, sample_lit,literature_long=literature_long, prob = literature_long$author_citations)
+citations_samples <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$author_citations)
 
 citations <- tibble(
   nodes = citations_samples %>% map(1) %>% modify(nrow) %>% unlist(),
@@ -481,20 +545,22 @@ Average edges recovered: `r citations$edges %>% mean() `
 
 # Comparing biases
 
-```{r biases, fig.width=4.5, fig.height=2, out.width="49%", fig.show="hold"}
+```{r biases, fig.width=4.5, fig.height=2, out.width="100%", fig.show="hold"}
 s <- full_join(random, gender) %>% 
+  full_join(gender2) %>% 
   full_join(hindex) %>% 
   full_join(citations)
 
 s %>% 
   ggplot() + 
   aes(x = nodes, fill = sample, color = sample) +
-  geom_density(alpha = .5) + 
+  geom_density(alpha = .3) + 
   scale_color_viridis_d() + 
   scale_fill_viridis_d() +
   theme_minimal() + 
   labs(color = "", 
-       fill = "") + 
+       fill = "",
+       x = "Nodes Recovered (out of 56)") + 
   theme(axis.text.y = element_blank(),
         panel.grid.major.y = element_blank(),
         panel.grid.minor.y = element_blank())
@@ -502,12 +568,13 @@ s %>%
 s %>% 
   ggplot() + 
   aes(x = edges, fill = sample, color = sample) +
-  geom_density(alpha = .5) + 
+  geom_density(alpha = .3) + 
   scale_color_viridis_d() + 
   scale_fill_viridis_d() +
   theme_minimal() + 
   labs(color = "", 
-       fill = "") + 
+       fill = "",
+       x = "Edges Recovered (out of 69)") + 
   theme(axis.text.y = element_blank(),
         panel.grid.major.y = element_blank(),
         panel.grid.minor.y = element_blank())
