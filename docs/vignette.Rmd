@@ -4,7 +4,15 @@ author: "Devin Judge-Lord, Adeline Lo & Kyler Hudson"
 subtitle: Redistricting Literature
 output:
   html_document:
+    toc: yes
     df_print: paged
+    number_sections: true
+  bookdown::html_document2:
+    highlight: zenburn
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+    number_sections: true
 ---
 
 ```{r, message=FALSE, warning=FALSE}
@@ -71,7 +79,7 @@ library(magrittr)
 
 # data("literature")
 #FIXME data() WILL WORK WHEN NETLIT"S literature_metadata IS UPDATED 
-literature <- read_csv("data/literature.csv")
+literature <- read_csv(here::here("Data/literature.csv"))
 
 lit_table <- literature %>%
   select(-cites_empirical) %>% 
@@ -290,6 +298,13 @@ p + facet_wrap("confound")
 
 ```
 
+The following two graphs demonstrate the change in the network over time. The graph on the left includes edges in which the earliest citation comes before 2015. For comparison, the graph on the left is the full network, including all edges from 2010 to 2020.
+
+```{r, out.width = "49%", out.height = "20%", fig.align = 'center', fig.show = 'hold'}
+#include_graphics(here::here("figs/Network20102015.png"))
+#include_graphics(here::here("figs/Network20102020.png"))
+``` 
+
 
 ### Betweenness
 
@@ -505,12 +520,20 @@ scale_edge_color_viridis(begin = 0.2,
 
 ### Causal Direction
 
+Grey arrows 
+
+- heterogeneous 
+- unclear 
+- mechanical or otherwise non-causal
+
+TODO: Examples of the above from google sheet. 
+
 ```{r ggraph-dag}
 set.seed(5)
 
 p <- ggraph(g, layout = 'fr') + 
   geom_node_point(
-    aes(color = degree_total %>% as.factor() ),
+    color = "grey",
     size = 6, 
     alpha = .7
     ) + 
