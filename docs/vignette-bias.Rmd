@@ -21,6 +21,7 @@ This vignette shows examples of assessing bias in literature review networks bas
 
 ```{r setup, include=FALSE,  message=FALSE, warning=FALSE}
 library(knitr)
+library(igraph)
 
 knitr::opts_chunk$set(echo = TRUE, 
                       #cache = FALSE,
@@ -387,11 +388,24 @@ random_samples <- map(1:1000, # 100 samples
                       literature_long=literature_long, 
                       prob = literature_long$unbiased)
 
+samples <- random_samples
+
+mean_edge_betw <- . %>% pull(edge_betweenness) %>% mean()
+mean_node_betw <- . %>% pull(betweenness) %>% mean()
+mean_node_degree <- . %>% pull(degree_total) %>% mean()
+
 # make a table of the total number of nodes, edges, and the graph object for plotting
 random <- tibble(
-  nodes = random_samples %>% map(1) %>% modify(nrow) %>% unlist(),
-  edges = random_samples %>% map(2) %>% modify(nrow) %>% unlist(),
-  graph = random_samples %>% map(3),
+  #edge stats
+  edges = samples %>% map(1) %>% modify(nrow) %>% unlist(),
+  edge_between_mean = samples %>% map(1) %>% modify(mean_edge_betw) %>% unlist(),
+  # nodes stats
+    nodes = samples %>% map(2) %>% modify(nrow) %>% unlist(),
+  node_between_mean = samples %>% map(2) %>% modify(mean_node_betw) %>% unlist(),
+  node_degree_mean = samples %>% map(2) %>% modify(mean_node_degree) %>% unlist(),
+  #graph stats 
+  communities = samples %>% map(3) %>% modify(cluster_walktrap) %>% modify(length) %>% unlist(),
+  graph = samples %>% map(3),
   sample = "Random"
 )
 
@@ -414,10 +428,19 @@ Average edges recovered: `r random$edges %>% mean() `
 #  biased samples
 gender_samples <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$weight)
 
+samples <- gender_samples
+
 gender <- tibble(
-  nodes = gender_samples %>% map(1) %>% modify(nrow) %>% unlist(),
-  edges = gender_samples %>% map(2) %>% modify(nrow) %>% unlist(),
-  graph = gender_samples %>% map(3),
+  #edge stats
+  edges = samples %>% map(1) %>% modify(nrow) %>% unlist(),
+  edge_between_mean = samples %>% map(1) %>% modify(mean_edge_betw) %>% unlist(),
+  # nodes stats
+    nodes = samples %>% map(2) %>% modify(nrow) %>% unlist(),
+  node_between_mean = samples %>% map(2) %>% modify(mean_node_betw) %>% unlist(),
+  node_degree_mean = samples %>% map(2) %>% modify(mean_node_degree) %>% unlist(),
+  #graph stats 
+  communities = samples %>% map(3) %>% modify(cluster_walktrap) %>% modify(length) %>% unlist(),
+  graph = samples %>% map(3),
   sample = "Gender bias favoring men"
 )
   
@@ -447,10 +470,19 @@ literature_long %<>%
 #  biased samples
 gender_samples <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$weight)
 
+samples <- gender_samples
+
 gender <- tibble(
-  nodes = gender_samples %>% map(1) %>% modify(nrow) %>% unlist(),
-  edges = gender_samples %>% map(2) %>% modify(nrow) %>% unlist(),
-  graph = gender_samples %>% map(3),
+  #edge stats
+  edges = samples %>% map(1) %>% modify(nrow) %>% unlist(),
+  edge_between_mean = samples %>% map(1) %>% modify(mean_edge_betw) %>% unlist(),
+  # nodes stats
+    nodes = samples %>% map(2) %>% modify(nrow) %>% unlist(),
+  node_between_mean = samples %>% map(2) %>% modify(mean_node_betw) %>% unlist(),
+  node_degree_mean = samples %>% map(2) %>% modify(mean_node_degree) %>% unlist(),
+  #graph stats 
+  communities = samples %>% map(3) %>% modify(cluster_walktrap) %>% modify(length) %>% unlist(),
+  graph = samples %>% map(3),
   sample = "Gender bias favoring men"
 )
   
@@ -480,10 +512,19 @@ literature_long %<>%
 # biased samples
 gender_samples2 <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$weight)
 
+samples <- gender_samples2
+
 gender2 <- tibble(
-  nodes = gender_samples2 %>% map(1) %>% modify(nrow) %>% unlist(),
-  edges = gender_samples2 %>% map(2) %>% modify(nrow) %>% unlist(),
-  graph = gender_samples2 %>% map(3),
+  #edge stats
+  edges = samples %>% map(1) %>% modify(nrow) %>% unlist(),
+  edge_between_mean = samples %>% map(1) %>% modify(mean_edge_betw) %>% unlist(),
+  # nodes stats
+    nodes = samples %>% map(2) %>% modify(nrow) %>% unlist(),
+  node_between_mean = samples %>% map(2) %>% modify(mean_node_betw) %>% unlist(),
+  node_degree_mean = samples %>% map(2) %>% modify(mean_node_degree) %>% unlist(),
+  #graph stats 
+  communities = samples %>% map(3) %>% modify(cluster_walktrap) %>% modify(length) %>% unlist(),
+  graph = samples %>% map(3),
   sample = "Gender bias favoring women"
 )
   
@@ -509,10 +550,19 @@ literature_long %<>%
 #  biased samples
 hindex_samples <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$author_h_index)
 
+samples <- hindex_samples
+
 hindex <- tibble(
-  nodes = hindex_samples %>% map(1) %>% modify(nrow) %>% unlist(),
-  edges = hindex_samples %>% map(2) %>% modify(nrow) %>% unlist(),
-  graph = hindex_samples %>% map(3),
+  #edge stats
+  edges = samples %>% map(1) %>% modify(nrow) %>% unlist(),
+  edge_between_mean = samples %>% map(1) %>% modify(mean_edge_betw) %>% unlist(),
+  # nodes stats
+    nodes = samples %>% map(2) %>% modify(nrow) %>% unlist(),
+  node_between_mean = samples %>% map(2) %>% modify(mean_node_betw) %>% unlist(),
+  node_degree_mean = samples %>% map(2) %>% modify(mean_node_degree) %>% unlist(),
+  #graph stats 
+  communities = samples %>% map(3) %>% modify(cluster_walktrap) %>% modify(length) %>% unlist(),
+  graph = samples %>% map(3),
   sample = "H-Index bias"
 )
   
@@ -537,10 +587,19 @@ literature_long %<>%
 # gender-biased samples
 citations_samples <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$author_citations)
 
+samples <- citations_samples
+
 citations <- tibble(
-  nodes = citations_samples %>% map(1) %>% modify(nrow) %>% unlist(),
-  edges = citations_samples %>% map(2) %>% modify(nrow) %>% unlist(),
-  graph = citations_samples %>% map(3),
+  #edge stats
+  edges = samples %>% map(1) %>% modify(nrow) %>% unlist(),
+  edge_between_mean = samples %>% map(1) %>% modify(mean_edge_betw) %>% unlist(),
+  # nodes stats
+    nodes = samples %>% map(2) %>% modify(nrow) %>% unlist(),
+  node_between_mean = samples %>% map(2) %>% modify(mean_node_betw) %>% unlist(),
+  node_degree_mean = samples %>% map(2) %>% modify(mean_node_degree) %>% unlist(),
+  #graph stats 
+  communities = samples %>% map(3) %>% modify(cluster_walktrap) %>% modify(length) %>% unlist(),
+  graph = samples %>% map(3),
   sample = "Citations bias"
 )
   
@@ -588,5 +647,85 @@ s %>%
   theme(axis.text.y = element_blank(),
         panel.grid.major.y = element_blank(),
         panel.grid.minor.y = element_blank())
+
+
+s %>% 
+  ggplot() + 
+  aes(x = edge_between_mean, fill = sample, color = sample) +
+  geom_density(alpha = .3) + 
+  scale_color_viridis_d() + 
+  scale_fill_viridis_d() +
+  theme_minimal() + 
+  labs(color = "", 
+       fill = "",
+       x = "Average Edge Betweenness") + 
+  theme(axis.text.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank())
+
+s %>% 
+  ggplot() + 
+  aes(x = node_between_mean, fill = sample, color = sample) +
+  geom_density(alpha = .3) + 
+  scale_color_viridis_d() + 
+  scale_fill_viridis_d() +
+  theme_minimal() + 
+  labs(color = "", 
+       fill = "",
+       x = "Average Node Betweenness") + 
+  theme(axis.text.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank())
+
+s %>% 
+  ggplot() + 
+  aes(x = node_degree_mean, fill = sample, color = sample) +
+  geom_density(alpha = .3) + 
+  scale_color_viridis_d() + 
+  scale_fill_viridis_d() +
+  theme_minimal() + 
+  labs(color = "", 
+       fill = "",
+       x = "Average Degree") + 
+  theme(axis.text.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank())
   
+s %>% 
+  ggplot() + 
+  aes(x = communities, fill = sample, color = sample) +
+  geom_density(alpha = .3) + 
+  scale_color_viridis_d() + 
+  scale_fill_viridis_d() +
+  theme_minimal() + 
+  labs(color = "", 
+       fill = "",
+       x = "Communities") + 
+  theme(axis.text.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank())
 ```
+
+<!--
+# TODO 
+
+- max centrality?
+
+-one measure of [shortest-path](https://igraph.org/c/doc/igraph-Structural.html#shortest-path-related-functions) = 3.15. `igraph_average_path_length`
+-one measure of centrality (total? average?) 
+-one measure of vertex degree (total? average?) 
+-one measure of closeness (total? average?) 
+-one measure of betweeness (total? average?) 
+-one measure of eignevector centrality (total? average?) 
+-one measure of connected-components, and clusters and bridges (total? average?) 
+
+Other ideas:
+
+- `transitivity_avglocal_undirected`, igraph_transitivity_avglocal_undirected — Average local transitivity (clustering coefficient).  
+- `transitivity_local_undirected`, igraph_transitivity_local_undirected — Calculates the local transitivity (clustering coefficient) of a graph.
+- `transitivity_undirected`, igraph_transitivity_undirected — Calculates the transitivity (clustering coefficient) of a graph.
+- `assortativity_degree`, igraph_assortativity_degree — Assortativity of a graph based on vertex degree.
+- `density`, igraph_density — Calculate the density of a graph.
+- `diameter`, igraph_diameter — Calculates the diameter of a graph (longest geodesic).
+
+--> 
