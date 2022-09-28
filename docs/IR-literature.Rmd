@@ -1,0 +1,68 @@
+---
+title: "Applied Researcher Experiment"
+author: "Adeline Lo, Kyler Hudson, & Devin Judge-Lord"
+subtitle: IR Literature
+output:
+  bookdown::html_document2:
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(igraph)
+library("sjmisc")
+library(ggraph)
+library(knitr)
+library(kableExtra)
+```
+
+# Network Creation
+In order to gauge the validity of our method, we conducted an experiment in which five researchers independently coded the same set of articles and then compared the resulting networks. The researchers read fifteen articles, which we pulled from a section of James Vreeland's [International Organizations syllabus](http://jrv.mycpanel.princeton.edu/POL550.html#week12). Each researcher coded the articles' relationships in a simple Excel spreadsheet containing three columns: *from*, *to*, and *citations*. We then used the *review()* function from our *netlit* package to create the network diagrams, which are shown below.
+
+```{r experiment_results}
+load(here::here("figs/experiment_researcher_1_network.RData"))
+researcher_1_network
+
+load(here::here("figs/experiment_researcher_2_network.RData"))
+researcher_2_network
+
+load(here::here("figs/experiment_researcher_3_network.RData"))
+researcher_3_network
+
+load(here::here("figs/experiment_researcher_4_network.RData"))
+researcher_4_network
+
+load(here::here("figs/experiment_researcher_5_network.RData"))
+researcher_5_network
+```
+
+# Network Similarity
+After coding the relationships and creating the networks, we wanted to measure network similarity. We gave each coder a copy of every other coder's spreadsheet and asked them to assign a similarity score for each edge in the other coder's network. In essence, the coders asked themselves "does this conceptual relationship also exist in my network?" The similarity score could take three distinct values: *0* if the relationship does not exist in their own network, *1* if the relationship exists in their own network but with different labels, and *2* if the exact relationship exists in their own network. Using this data, we then created tables summarizing the network similarity, shown below. The "strict" table counts only *2*s as relationships that exist in both coders' networks, whereas the "lax" table counts both *1*s and *2*s. The diagonals are NA because coders did not evaluate their own network (all edges would appear in their own network). Off-diagonals represent the percentage of shared edges perceived by the row when examining the column's network. For example, using the strict evaluation criteria, Researcher 2 claims that 67% of the edges in Researcher 1's network also appear in his own network. As the lax table shows, accounting for labelling differences greatly increases the network similarity. Well over half of all edges are shared between all pairs of researchers. 
+
+```{r}
+#strict results
+load(here::here("Data/experiment_results_strict.RData"))
+
+kable(result_strict_df, 
+      format = "html", 
+      digits = 2,
+      caption = "Perceived Similarity Across Researcher Findings (Strict)") %>% 
+  kable_styling(full_width = F,
+                bootstrap_options = "striped")
+
+#lax results
+load(here::here("Data/experiment_results_lax.RData"))
+
+kable(result_lax_df, 
+      format = "html", 
+      digits = 2,
+      caption = "Perceived Similarity Across Researcher Findings (Lax)") %>% 
+  kable_styling(full_width = F,
+                bootstrap_options = "striped")
+
+```
+
+These quantitative results are supported by the qualitative feedback we elicited from the researchers. We asked the five researchers "if you were to separately use each of these networks to understand the current state of the literature – both what currently exists and what is missing – would you come away with similar conclusions?" and received positive responses from all five. For example, Researcher 3 stated that "after reading the 15 papers provided and then looking at everyone’s maps, the central causal relationships are present in all maps." Research 5 reported that "except for some minor details, everyone captured similar causal relationships as the main ones." This feedback increases our confidence that our method is replicable; starting from the same literature, five independent researchers arrived at similar conclusions regarding the state of the literature. In addition, these represented the modal type of researcher who might use our review method: junior researchers who are familiar with the discipline but are new to a specific topic.
+
+
+
