@@ -103,12 +103,14 @@ literature_long %>%
 
 ---
 
+<!--FIXME 
 ## Missing metadata 
 ```{r}
 literature_metadata %>%
   filter(is.na(author_gender) | is.na(author_h_index)| is.na(author_citations)) %>% 
   kable()
 ```
+--->
 
 
 ```{r libraries, message=FALSE, warning=FALSE}
@@ -260,7 +262,13 @@ ggraph(lit$g, layout = 'fr') +
                          end = .5, 
                          direction = -1) 
 }
+
+
+literature_long %<>%
+  mutate(author_is_man = author_gender == "M")
 ```
+
+<!--MOVE TO VIGNETTE SECTION ON COVARS
 
 ## Men only
 
@@ -269,8 +277,7 @@ ggraph(lit$g, layout = 'fr') +
 
 
 ```{r men-only, fig.retina=2}
-literature_long %<>%
-  mutate(author_is_man = author_gender == "M")
+
 
 bro_lit <- literature_long %>% 
   filter(author_is_man) %>% 
@@ -337,6 +344,8 @@ netlit_bias_plot(lit_sr_cites)
 
 Nodes missing: `r lit$nodelist$node[!lit$nodelist$node %in% lit_sr_cites$nodelist$node]`
 
+-->
+
 ---
 
 # Biased Samples
@@ -370,20 +379,18 @@ sample_lit <- function(n, literature_long, prob){
   
     return(sample)
 }
-
-# TEST 
-# random_samples <- sample_lit(literature_long, prob =  literature_long$unbiased)
-# gender_samples <- sample_lit(literature_long, prob = literature_long$weight)
 ```
 
----
+```{r}
+n_samples <-1000
+```
 
-## Random draws of 100 studies
+## Random draws of 100 studies (`r n_samples` draws)
 
-There are 165 studies in the original literature review.
+There are 165 studies in the original literature review. We draw 100 of them---first at random, then weighted random samples. For each type of simulated bias we use `r n_samples` draws. 
 
 ```{r draw-random, out.width= "20%", cache=TRUE, results='hide'}
-random_samples <- map(1:1000, # 100 samples 
+random_samples <- map(1:n_samples, # 100 samples 
                       sample_lit,
                       literature_long=literature_long, 
                       prob = literature_long$unbiased)
@@ -395,7 +402,8 @@ mean_node_betw <- . %>% pull(betweenness) %>% mean()
 mean_node_degree <- . %>% pull(degree_total) %>% mean()
 
 # make a table of the total number of nodes, edges, and the graph object for plotting
-random <- tibble(
+summarise_samples <- function(samples){
+summary <- tibble(
   #edge stats
   edges = samples %>% map(1) %>% modify(nrow) %>% unlist(),
   edge_between_mean = samples %>% map(1) %>% modify(mean_edge_betw) %>% unlist(),
@@ -405,7 +413,15 @@ random <- tibble(
   node_degree_mean = samples %>% map(2) %>% modify(mean_node_degree) %>% unlist(),
   #graph stats 
   communities = samples %>% map(3) %>% modify(cluster_walktrap) %>% modify(length) %>% unlist(),
-  graph = samples %>% map(3),
+  diameter = samples %>% map(3) %>% modify(diameter)  %>% unlist(),
+  graph = samples %>% map(3)
+  )
+return(summary)
+}
+
+summary <- summarise_samples(samples)
+
+random <- summary %>% mutate(
   sample = "Random"
 )
 
@@ -413,10 +429,19 @@ random <- tibble(
 map(random_samples[1:10], netlit_bias_plot) 
 ```
 
+Average nodes recovered: `r summary$nodes %>% mean() `
 
-Average nodes recovered: `r random$nodes %>% mean() `
+Average node betweenness recovered: `r summary$node_between_mean %>% mean() `
 
-Average edges recovered: `r random$edges %>% mean() `
+Average edges recovered: `r summary$edges %>% mean() `
+
+Average edge betweenness recovered: `r summary$edge_between_mean %>% mean() `
+
+Average node degree recovered: `r summary$node_degree_mean %>% mean() `
+
+Average communities recovered: `r summary$communities %>% mean() `
+
+Average diameter recovered: `r summary$diameter %>% mean() `
 
 ---
 
@@ -426,31 +451,32 @@ Average edges recovered: `r random$edges %>% mean() `
 
 ```{r draw-gender-bias, out.width= "20%", cache=TRUE, results='hide'}
 #  biased samples
-gender_samples <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$weight)
+gender_samples <- map(1:n_samples, sample_lit,literature_long=literature_long, prob = literature_long$weight)
 
 samples <- gender_samples
 
-gender <- tibble(
-  #edge stats
-  edges = samples %>% map(1) %>% modify(nrow) %>% unlist(),
-  edge_between_mean = samples %>% map(1) %>% modify(mean_edge_betw) %>% unlist(),
-  # nodes stats
-    nodes = samples %>% map(2) %>% modify(nrow) %>% unlist(),
-  node_between_mean = samples %>% map(2) %>% modify(mean_node_betw) %>% unlist(),
-  node_degree_mean = samples %>% map(2) %>% modify(mean_node_degree) %>% unlist(),
-  #graph stats 
-  communities = samples %>% map(3) %>% modify(cluster_walktrap) %>% modify(length) %>% unlist(),
-  graph = samples %>% map(3),
-  sample = "Gender bias favoring men"
-)
+summary <- summarise_samples(samples)
+
+gender <- summary %>% mutate(sample = "Gender bias favoring men")
   
 # map(gender_samples[1:10], netlit_bias_plot)
 map(gender_samples[1:10], netlit_bias_plot)
 ```
 
-Average nodes recovered: `r gender$nodes %>% mean() `
+Average nodes recovered: `r summary$nodes %>% mean() `
 
-Average edges recovered: `r gender$edges %>% mean() `
+Average node betweenness recovered: `r summary$node_between_mean %>% mean() `
+
+Average edges recovered: `r summary$edges %>% mean() `
+
+Average edge betweenness recovered: `r summary$edge_between_mean %>% mean() `
+
+Average node degree recovered: `r summary$node_degree_mean %>% mean() `
+
+Average communities recovered: `r summary$communities %>% mean() `
+
+Average diameter recovered: `r summary$diameter %>% mean() `
+
 
 
 ---
@@ -468,21 +494,13 @@ literature_long %<>%
 
 
 #  biased samples
-gender_samples <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$weight)
+gender_samples <- map(1:n_samples, sample_lit,literature_long=literature_long, prob = literature_long$weight)
 
 samples <- gender_samples
 
-gender <- tibble(
-  #edge stats
-  edges = samples %>% map(1) %>% modify(nrow) %>% unlist(),
-  edge_between_mean = samples %>% map(1) %>% modify(mean_edge_betw) %>% unlist(),
-  # nodes stats
-    nodes = samples %>% map(2) %>% modify(nrow) %>% unlist(),
-  node_between_mean = samples %>% map(2) %>% modify(mean_node_betw) %>% unlist(),
-  node_degree_mean = samples %>% map(2) %>% modify(mean_node_degree) %>% unlist(),
-  #graph stats 
-  communities = samples %>% map(3) %>% modify(cluster_walktrap) %>% modify(length) %>% unlist(),
-  graph = samples %>% map(3),
+summary <- summarise_samples(samples)
+
+gender <- summary %>% mutate(
   sample = "Gender bias favoring men"
 )
   
@@ -490,9 +508,20 @@ gender <- tibble(
 map(gender_samples[1:10], netlit_bias_plot)
 ```
 
-Average nodes recovered: `r gender$nodes %>% mean() `
+Average nodes recovered: `r summary$nodes %>% mean() `
 
-Average edges recovered: `r gender$edges %>% mean() `
+Average node betweenness recovered: `r summary$node_between_mean %>% mean() `
+
+Average edges recovered: `r summary$edges %>% mean() `
+
+Average edge betweenness recovered: `r summary$edge_between_mean %>% mean() `
+
+Average node degree recovered: `r summary$node_degree_mean %>% mean() `
+
+Average communities recovered: `r summary$communities %>% mean() `
+
+Average diameter recovered: `r summary$diameter %>% mean() `
+
 
 
 ---
@@ -508,23 +537,13 @@ literature_long %<>%
       TRUE~ .5 
     ))
 
+gender_samples2 <- samples <- map(1:n_samples, sample_lit,literature_long=literature_long, prob = literature_long$weight)
+
 
 # biased samples
-gender_samples2 <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$weight)
+summary <- summarise_samples(samples)
 
-samples <- gender_samples2
-
-gender2 <- tibble(
-  #edge stats
-  edges = samples %>% map(1) %>% modify(nrow) %>% unlist(),
-  edge_between_mean = samples %>% map(1) %>% modify(mean_edge_betw) %>% unlist(),
-  # nodes stats
-    nodes = samples %>% map(2) %>% modify(nrow) %>% unlist(),
-  node_between_mean = samples %>% map(2) %>% modify(mean_node_betw) %>% unlist(),
-  node_degree_mean = samples %>% map(2) %>% modify(mean_node_degree) %>% unlist(),
-  #graph stats 
-  communities = samples %>% map(3) %>% modify(cluster_walktrap) %>% modify(length) %>% unlist(),
-  graph = samples %>% map(3),
+gender2 <- summary %>% mutate(
   sample = "Gender bias favoring women"
 )
   
@@ -532,9 +551,20 @@ gender2 <- tibble(
 map(gender_samples2[1:10], netlit_bias_plot)
 ```
 
-Average nodes recovered: `r gender2$nodes %>% mean() `
+Average nodes recovered: `r summary$nodes %>% mean() `
 
-Average edges recovered: `r gender2$edges %>% mean() `
+Average node betweenness recovered: `r summary$node_between_mean %>% mean() `
+
+Average edges recovered: `r summary$edges %>% mean() `
+
+Average edge betweenness recovered: `r summary$edge_between_mean %>% mean() `
+
+Average node degree recovered: `r summary$node_degree_mean %>% mean() `
+
+Average communities recovered: `r summary$communities %>% mean() `
+
+Average diameter recovered: `r summary$diameter %>% mean() `
+
 
 
 ---
@@ -548,21 +578,13 @@ literature_long %<>%
   mutate(author_h_index = replace_na(author_h_index, 0 ))
 
 #  biased samples
-hindex_samples <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$author_h_index)
+hindex_samples <- samples <- map(1:n_samples, sample_lit,literature_long=literature_long, prob = literature_long$weight)
 
-samples <- hindex_samples
 
-hindex <- tibble(
-  #edge stats
-  edges = samples %>% map(1) %>% modify(nrow) %>% unlist(),
-  edge_between_mean = samples %>% map(1) %>% modify(mean_edge_betw) %>% unlist(),
-  # nodes stats
-    nodes = samples %>% map(2) %>% modify(nrow) %>% unlist(),
-  node_between_mean = samples %>% map(2) %>% modify(mean_node_betw) %>% unlist(),
-  node_degree_mean = samples %>% map(2) %>% modify(mean_node_degree) %>% unlist(),
-  #graph stats 
-  communities = samples %>% map(3) %>% modify(cluster_walktrap) %>% modify(length) %>% unlist(),
-  graph = samples %>% map(3),
+
+summary <- summarise_samples(samples)
+
+hindex <- summary %>% mutate(
   sample = "H-Index bias"
 )
   
@@ -570,9 +592,20 @@ hindex <- tibble(
 map(hindex_samples[1:10], netlit_bias_plot)
 ```
 
-Average nodes recovered: `r hindex$nodes %>% mean() `
+Average nodes recovered: `r summary$nodes %>% mean() `
 
-Average edges recovered: `r hindex$edges %>% mean() `
+Average node betweenness recovered: `r summary$node_between_mean %>% mean() `
+
+Average edges recovered: `r summary$edges %>% mean() `
+
+Average edge betweenness recovered: `r summary$edge_between_mean %>% mean() `
+
+Average node degree recovered: `r summary$node_degree_mean %>% mean() `
+
+Average communities recovered: `r summary$communities %>% mean() `
+
+Average diameter recovered: `r summary$diameter %>% mean() `
+
 
 ---
 
@@ -585,21 +618,13 @@ literature_long %<>%
   mutate(author_citations = replace_na(author_citations, 0 ))
 
 # gender-biased samples
-citations_samples <- map(1:1000, sample_lit,literature_long=literature_long, prob = literature_long$author_citations)
+citations_samples <- map(1:n_samples, sample_lit,literature_long=literature_long, prob = literature_long$author_citations)
 
 samples <- citations_samples
 
-citations <- tibble(
-  #edge stats
-  edges = samples %>% map(1) %>% modify(nrow) %>% unlist(),
-  edge_between_mean = samples %>% map(1) %>% modify(mean_edge_betw) %>% unlist(),
-  # nodes stats
-    nodes = samples %>% map(2) %>% modify(nrow) %>% unlist(),
-  node_between_mean = samples %>% map(2) %>% modify(mean_node_betw) %>% unlist(),
-  node_degree_mean = samples %>% map(2) %>% modify(mean_node_degree) %>% unlist(),
-  #graph stats 
-  communities = samples %>% map(3) %>% modify(cluster_walktrap) %>% modify(length) %>% unlist(),
-  graph = samples %>% map(3),
+summary <- summarise_samples(samples)
+
+citations <- summary %>% mutate(
   sample = "Citations bias"
 )
   
@@ -607,9 +632,20 @@ citations <- tibble(
 map(citations_samples[1:10], netlit_bias_plot) # %>% .[c(1:10)]
 ```
 
-Average nodes recovered: `r citations$nodes %>% mean() `
+Average nodes recovered: `r summary$nodes %>% mean() `
 
-Average edges recovered: `r citations$edges %>% mean() `
+Average node betweenness recovered: `r summary$node_between_mean %>% mean() `
+
+Average edges recovered: `r summary$edges %>% mean() `
+
+Average edge betweenness recovered: `r summary$edge_between_mean %>% mean() `
+
+Average node degree recovered: `r summary$node_degree_mean %>% mean() `
+
+Average communities recovered: `r summary$communities %>% mean() `
+
+Average diameter recovered: `r summary$diameter %>% mean() `
+
 
 
 # Comparing Biases
@@ -628,7 +664,7 @@ s %>%
   scale_fill_viridis_d() +
   theme_minimal() + 
   labs(color = "", 
-       fill = "",
+       fill = "", y = "Density",
        x = "Nodes Recovered (out of 56)") + 
   theme(axis.text.y = element_blank(),
         panel.grid.major.y = element_blank(),
@@ -642,7 +678,7 @@ s %>%
   scale_fill_viridis_d() +
   theme_minimal() + 
   labs(color = "", 
-       fill = "",
+       fill = "", y = "Density",
        x = "Edges Recovered (out of 69)") + 
   theme(axis.text.y = element_blank(),
         panel.grid.major.y = element_blank(),
@@ -657,7 +693,7 @@ s %>%
   scale_fill_viridis_d() +
   theme_minimal() + 
   labs(color = "", 
-       fill = "",
+       fill = "", y = "Density",
        x = "Average Edge Betweenness") + 
   theme(axis.text.y = element_blank(),
         panel.grid.major.y = element_blank(),
@@ -671,7 +707,7 @@ s %>%
   scale_fill_viridis_d() +
   theme_minimal() + 
   labs(color = "", 
-       fill = "",
+       fill = "", y = "Density",
        x = "Average Node Betweenness") + 
   theme(axis.text.y = element_blank(),
         panel.grid.major.y = element_blank(),
@@ -685,7 +721,7 @@ s %>%
   scale_fill_viridis_d() +
   theme_minimal() + 
   labs(color = "", 
-       fill = "",
+       fill = "", y = "Density",
        x = "Average Degree") + 
   theme(axis.text.y = element_blank(),
         panel.grid.major.y = element_blank(),
@@ -699,8 +735,22 @@ s %>%
   scale_fill_viridis_d() +
   theme_minimal() + 
   labs(color = "", 
-       fill = "",
+       fill = "", y = "Density",
        x = "Communities") + 
+  theme(axis.text.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank())
+
+s %>% 
+  ggplot() + 
+  aes(x = diameter, fill = sample, color = sample) +
+  geom_density(alpha = .3) + 
+  scale_color_viridis_d() + 
+  scale_fill_viridis_d() +
+  theme_minimal() + 
+  labs(color = "", 
+       fill = "", y = "Density",
+       x = "Diameter") + 
   theme(axis.text.y = element_blank(),
         panel.grid.major.y = element_blank(),
         panel.grid.minor.y = element_blank())
