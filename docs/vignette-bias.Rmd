@@ -656,6 +656,23 @@ s <- full_join(random, gender) %>%
   full_join(hindex) %>% 
   full_join(citations)
 
+round2 <- . %>% round(1)
+
+s_table <- s %>% group_by(sample) %>% 
+  select(where(is.numeric)) %>% summarise_all(mean) %>% 
+  group_by(sample) %>% 
+  mutate_all(round2) %>% 
+  arrange(rev(sample))
+
+color.me <- which(s_table$sample == "Random")
+
+names(s_table) %<>% str_remove("_mean")
+
+s_table %>% 
+  kable(booktabs = T) %>% 
+  kable_styling()  
+
+
 s %>% 
   ggplot() + 
   aes(x = nodes, fill = sample, color = sample) +
