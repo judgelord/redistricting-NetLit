@@ -13,7 +13,7 @@ output:
       code_folding: hide
 ---
 
-This vignette shows examples of assessing bias in literature review networks based on covariates from metadata about the studies and authors included or excluded from the review. Specifically, for each study, we collect metadata on the lead author's gender, H-Index, and total number of citations. We then assess the impact of selecting studies on covariates in two ways: 
+This vignette shows examples of assessing bias in literature review networks based on covariates from metadata about the studies and authors included or excluded from the review on redistricting in the main manuscript. Specifically, for each study, we collect metadata on the lead author's gender, H-Index, and total number of citations. We then assess the impact of selecting studies on covariates in two ways: 
 
 1. First, we subset the network (e.g., to studies where the lead author is a man) and observe how many nodes and edges are missing in these subsets. This reveals the contributions of underrepresented scholars to the network by showing what we lose if they are excluded.
 

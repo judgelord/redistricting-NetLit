@@ -518,75 +518,71 @@ scale_edge_color_viridis(begin = 0.2,
 
 ---
 
-### Causal Direction
+### Representing Different Edge Types Across Networks
 
-Grey arrows 
-
-- heterogeneous 
-- unclear 
-- mechanical or otherwise non-causal
-
-TODO: Examples of the above from google sheet. 
+This is a toy example of walking through creating networks from literature edgelists where the researcher might have coded for different types of edges (e.g. predictive relationships, causal relationships) and for their positive or negative effects (here colored as red versus green). We present the toy data below, where edge types can be causal or predictive, and either represent increasing or decreasing relationships.
 
 ```{r ggraph-dag}
-set.seed(5)
+edge_options <- c("increasing", "decreasing")
 
-p <- ggraph(g, layout = 'fr') + 
+set.seed(50)
+
+toy_df <- data.frame(to = sample(LETTERS[1:10], 30, replace = T),
+           edge = sample(edge_options, 30, replace = T),
+           from = sample(LETTERS[1:10], 30, replace = T), 
+           type = c(rep("Causal", 15), rep("Predictive", 15))) %>% 
+  distinct()
+
+set.seed(50)
+
+p <- ggraph(toy_df, layout = "fr") +
   geom_node_point(
     color = "grey",
     size = 6, 
-    alpha = .7
-    ) + 
+    alpha = 0.7
+  ) +
   geom_edge_arc2(
     aes(
       start_cap = circle(3, 'mm'),
       end_cap = circle(6, 'mm'),
-      color = edge,
-      linetype = empirical
-      ),
+      color = edge
+    ),
     curvature = 0,
     arrow = arrow(length = unit(2, 'mm'), 
                   type = "open")
-    ) +
+  ) +
   geom_edge_loop(
-      aes( color = edge,
+    aes(
+      color = edge,
       start_cap = circle(5, 'mm'),
-      end_cap = circle(2, 'mm'),
-      linetype = empirical
-      ),
-      n = 300,
-      strength = .6,
+      end_cap = circle(2, 'mm')
+    ),
+    n = 300,
+    strength = .6,
     arrow = arrow(length = unit(2, 'mm'), 
                   type = "open")
-    ) +
-  geom_node_text( aes(label = name), size = 2.3) + 
+  ) +
+  geom_node_text(aes(label = name), size = 2.3) + 
   ggplot2::theme_void() + 
-  theme(legend.position="bottom", #legend.direction = "vertical"
-        ) + 
-  labs(edge_color = "Causal\nEffect",
-       color = "Total Degree\nCentrality",
-       edge_linetype = "") + 
-scale_edge_color_manual(values = c("red", "dark green", "grey"))  +    
+  theme(legend.position = "bottom",
+  ) +
+  labs(edge_color = "Effect") + 
+  scale_edge_color_manual(values = c("red", "dark green"))  +    
   scale_color_viridis_d(option = "mako", 
                         begin = 1, 
-                        end = .5) 
+                        end = .5) +
+  facet_grid(. ~ type)
 
-p 
+p
+
 ```
-
-
-
----
-
-
 
 # About the example data
 
 Articles were chosen according to specific selection criteria. We first identified articles published since 2010 that either 1) were published in one of eight high-ranking journals or 2) gained at least 50 citations according to Google Scholar. We then chose articles that contained four possible key terms in the title or abstract.
 
 ```{r}
-# Journal articles in example data
-data("literature_metadata")
+load(file="literature_metadata.rda")
 
 literature_metadata %>% kable()
 
@@ -611,7 +607,7 @@ pub_table %>%
   kable(booktabs = T, format = "latex") %>%
   save_kable(file = "tables/pub_table.tex")
 
-data("literature")
+load(file="literature.rda")
 
 # save example concepts as .tex table to include in a paper
 literature %>%
@@ -620,17 +616,6 @@ literature %>%
   kable(booktabs = T, format = "latex") %>%
   save_kable(file = "tables/literature_example.tex")
 ```
-
-
-
-
-
-
-
-
-
-
-
 
 
 
